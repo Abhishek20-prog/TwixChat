@@ -8,16 +8,16 @@ const Login = () => {
             style={{ backgroundImage: `url(${img})` }}
         >
             {/* Logo */}
-           
-                {/* Add your logo here */}
-                <div className="mb-5 md:mb-0">
-                    <img
-                        src={logo}
-                        alt="TwixChat"
-                        className="h-13 w-auto object-contain pl-3"
-                    />
-                </div>
-            
+
+            {/* Add your logo here */}
+            <div className="mb-5 md:mb-0">
+                <img
+                    src={logo}
+                    alt="TwixChat"
+                    className="h-13 w-auto object-contain pl-3"
+                />
+            </div>
+
 
             {/* Main Content */}
             <div
@@ -49,21 +49,20 @@ const Login = () => {
                     </div>
 
                     {/* Heading */}
-                    <h1 className="text-4xl font-bold leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl">
-                        <span className="text-[#29243D]">
-                            More than just friends.
+                    <h1 className="text-4xl font-bold leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl" >
+                        <span className="text-[#24202E]">
+                            Find your people.
                         </span>
                         <br />
-                        <span className="text-[#D97745]">
-                            Truly connect.
+                        <span className="text-[#C68A24]">
+                            Build your circle.
                         </span>
                     </h1>
 
-                    {/* Description */}
-                    <p className="mt-5 max-w-md text-lg leading-relaxed text-[#625C70]">
-                        Connect with your people, share your moments,
-                        and build meaningful connections on{" "}
-                        <span className="font-semibold text-[#D97745]">
+                    <p className="mt-5 max-w-md text-lg leading-relaxed text-[#625D68]">
+                        Connect, share, and make every moment worth sharing.
+
+                        <span className="font-semibold text-[#C68A24]">
                             TwixChat
                         </span>
                         .
