@@ -1,11 +1,11 @@
 import React from 'react'
 
-const App = () => {
+const feed = () => {
   return (
     <div>
-      
+      feed
     </div>
   )
 }
 
-export default App
+export default feed

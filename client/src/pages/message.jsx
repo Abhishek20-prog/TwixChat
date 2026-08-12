@@ -1,11 +1,11 @@
 import React from 'react'
 
-const App = () => {
+const message = () => {
   return (
     <div>
-      
+      message
     </div>
   )
 }
 
-export default App
+export default message
