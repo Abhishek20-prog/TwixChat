@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 
 import { NavLink, useNavigate } from "react-router-dom";
-import { useClerk } from "@clerk/react";
+import { useClerk , UserButton } from "@clerk/react";
 
 import logo from "../assets/twixchat-removebg-preview.png";
 import dummyUsers from "../data/dummydata";
@@ -396,142 +396,17 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
             </span>
           </NavLink>
         </nav>
-
-        {/* =================================================
-            USER SECTION
-        ================================================= */}
-
-        <div
-          className="
-            mt-auto
-            shrink-0
-
-            border-t
-            border-gray-100
-
-            bg-white
-            p-4
-          "
-        >
-          {/* USER INFO */}
-
-          <div
-            className="
-              mb-3
-              flex
-              min-w-0
-              items-center
-              gap-3
-              rounded-xl
-              p-1
-
-              transition-colors
-              duration-200
-
-              hover:bg-[#FFF9EF]
-            "
-          >
-            {/* Avatar */}
-
-            <img
-              src={currentUser?.profilePicture}
-              alt={currentUser?.name || "User"}
-              className="
-                h-11
-                w-11
-                shrink-0
-
-                rounded-full
-
-                border-2
-                border-[#C68A24]/20
-
-                object-cover
-
-                transition-all
-                duration-300
-
-                hover:border-[#C68A24]
-                hover:scale-105
-              "
-            />
-
-            {/* Name + Username */}
-
-            <div className="min-w-0 flex-1">
-              <p
-                className="
-                  truncate
-                  text-sm
-                  font-semibold
-                  text-[#24202E]
-                "
-              >
-                {currentUser?.name}
-              </p>
-
-              <p
-                className="
-                  truncate
-                  text-xs
-                  text-gray-500
-                "
-              >
-                @{currentUser?.username}
-              </p>
-            </div>
-          </div>
-
-          {/* =================================================
-              LOGOUT
-          ================================================= */}
-
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="
-              group
-              flex
-              w-full
-              items-center
-              justify-center
-              gap-2
-
-              rounded-xl
-
-              border
-              border-gray-200
-
-              px-4
-              py-2.5
-
-              text-sm
-              font-medium
-              text-gray-600
-
-              transition-all
-              duration-200
-
-              hover:border-[#C68A24]/30
-              hover:bg-[#FFF9EF]
-              hover:text-[#24202E]
-
-              active:scale-[0.98]
-            "
-          >
-            <LogOut
-              size={17}
-              className="
-                transition-transform
-                duration-200
-
-                group-hover:-translate-x-0.5
-              "
-            />
-
-            Log out
-          </button>
-        </div>
+{/* ================= USER SECTION ================= */}
+<div className='w-full border-t border-gray-200 p-4 px-7 flex items-center justify-between'>
+  <div className='flex gap-2 items-center cursor-pointer'>
+    <UserButton />
+    <div>
+      <h1 className="text-sm font-medium">{currentUser.name}</h1>
+      <p className="text-xs text-gray-500">@{currentUser.username}</p>
+    </div>
+  </div>
+ <LogOut onClick={signOut} className='w-4.5 text-gray-400 hover:text-gray-700 transition cursor-pointer' />
+</div>
       </aside>
     </>
   );
