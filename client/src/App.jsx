@@ -1,6 +1,7 @@
 import React from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { useUser } from "@clerk/react";
+import { Toaster } from "react-hot-toast";
 
 import Login from "./pages/login";
 import Layout from "./pages/layout";
@@ -16,71 +17,92 @@ import Connections from "./pages/connections";
 const App = () => {
   const { user, isLoaded } = useUser();
 
-  // Clerk is still checking authentication
   if (!isLoaded) {
     return null;
   }
 
   return (
-    <Routes>
-
-      {/* ================= PUBLIC ROUTES ================= */}
-
-      <Route
-        path="/login"
-        element={user ? <Navigate to="/feed" replace /> : <Login />}
+    <>
+      {/* Global Toast */}
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 3000,
+          style: {
+            background: "#17383A",
+            color: "#fff",
+            borderRadius: "12px",
+            padding: "12px 16px",
+          },
+        }}
       />
 
-      {/* ================= PROTECTED APP ================= */}
+      <Routes>
 
-      <Route
-        path="/"
-        element={user ? <Layout /> : <Navigate to="/login" replace />}
-      >
-        <Route index element={<Navigate to="/feed" replace />} />
-
-        <Route path="feed" element={<Feed />} />
-
-        <Route path="message" element={<Message />} />
+        {/* ================= PUBLIC ROUTES ================= */}
 
         <Route
-          path="message/:userId"
-          element={<Chatbox />}
+          path="/login"
+          element={user ? <Navigate to="/feed" replace /> : <Login />}
         />
+
+        {/* ================= PROTECTED APP ================= */}
 
         <Route
-          path="connections"
-          element={<Connections />}
-        />
+          path="/"
+          element={user ? <Layout /> : <Navigate to="/login" replace />}
+        >
+          <Route index element={<Navigate to="/feed" replace />} />
+
+          <Route path="feed" element={<Feed />} />
+
+          <Route path="message" element={<Message />} />
+
+          <Route
+            path="message/:userId"
+            element={<Chatbox />}
+          />
+
+          <Route
+            path="connections"
+            element={<Connections />}
+          />
+
+          <Route
+            path="discover"
+            element={<Discover />}
+          />
+
+          <Route
+            path="createpost"
+            element={<Createpost />}
+          />
+
+          <Route
+            path="profile"
+            element={<Profile />}
+          />
+
+          <Route
+            path="profile/:profileId"
+            element={<Profile />}
+          />
+        </Route>
+
+        {/* ================= UNKNOWN URL ================= */}
 
         <Route
-          path="discover"
-          element={<Discover />}
+          path="*"
+          element={
+            <Navigate
+              to={user ? "/feed" : "/login"}
+              replace
+            />
+          }
         />
 
-        <Route
-          path="createpost"
-          element={<Createpost />}
-        />
-
-        <Route
-          path="profile"
-          element={<Profile />}
-        />
-
-        <Route
-          path="profile/:profileId"
-          element={<Profile />}
-        />
-      </Route>
-
-      {/* Unknown URL */}
-      <Route
-        path="*"
-        element={<Navigate to={user ? "/feed" : "/login"} replace />}
-      />
-
-    </Routes>
+      </Routes>
+    </>
   );
 };
 
