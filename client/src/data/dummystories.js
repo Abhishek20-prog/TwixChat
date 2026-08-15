@@ -8,9 +8,11 @@ const dummyStories = [
     },
     story: {
       type: "image",
-      media: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=600&q=80",
+      media:
+        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=600&q=80",
     },
-    createdAt: "2h ago",
+    createdAt: "2026-08-15T02:30:00.000Z",
+    updatedAt: "2026-08-15T12:30:00.000Z",
     viewed: false,
   },
 
@@ -23,9 +25,11 @@ const dummyStories = [
     },
     story: {
       type: "image",
-      media: "https://images.unsplash.com/photo-1500534623283-312aade485b7?w=600&q=80",
+      media:
+        "https://images.unsplash.com/photo-1500534623283-312aade485b7?w=600&q=80",
     },
-    createdAt: "3h ago",
+    createdAt: "2026-08-15T01:30:00.000Z",
+    updatedAt: "2026-08-15T11:30:00.000Z",
     viewed: false,
   },
 
@@ -38,28 +42,30 @@ const dummyStories = [
     },
     story: {
       type: "image",
-      media: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&q=80",
+      media:
+        "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&q=80",
     },
-    createdAt: "5h ago",
+    createdAt: "2026-08-15T03:30:00.000Z",
+    updatedAt: "2026-08-15T09:30:00.000Z",
     viewed: true,
   },
 
-  
   {
-  id: 4,
-  user: {
-    name: "Vikram Mehta",
-    username: "@vikram.m",
-    dp: "https://randomuser.me/api/portraits/men/32.jpg",
+    id: 4,
+    user: {
+      name: "Vikram Mehta",
+      username: "@vikram.m",
+      dp: "https://randomuser.me/api/portraits/men/32.jpg",
+    },
+    story: {
+      type: "image",
+      media:
+        "https://images.unsplash.com/photo-1786658054271-e6885f2cab30?w=600&auto=format&fit=crop&q=60",
+    },
+    createdAt: "2026-08-15T08:30:00.000Z",
+    updatedAt: "2026-08-15T08:30:00.000Z",
+    viewed: false,
   },
-  story: {
-    type: "image",
-    media: "https://images.unsplash.com/photo-1786658054271-e6885f2cab30?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxmZWF0dXJlZC1waG90b3MtZmVlZHw1fHx8ZW58MHx8fHx8",
-  },
-  createdAt: "6h ago",
-  viewed: false,
-},
-
 
   {
     id: 5,
@@ -70,9 +76,11 @@ const dummyStories = [
     },
     story: {
       type: "image",
-      media: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=600&q=80",
+      media:
+        "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=600&q=80",
     },
-    createdAt: "8h ago",
+    createdAt: "2026-08-15T06:30:00.000Z",
+    updatedAt: "2026-08-15T06:30:00.000Z",
     viewed: true,
   },
 
@@ -85,9 +93,11 @@ const dummyStories = [
     },
     story: {
       type: "image",
-      media: "https://images.unsplash.com/photo-1470770841072-f978cf4d019e?w=600&q=80",
+      media:
+        "https://images.unsplash.com/photo-1470770841072-f978cf4d019e?w=600&q=80",
     },
-    createdAt: "10h ago",
+    createdAt: "2026-08-15T04:30:00.000Z",
+    updatedAt: "2026-08-15T04:30:00.000Z",
     viewed: false,
   },
 
@@ -100,9 +110,11 @@ const dummyStories = [
     },
     story: {
       type: "image",
-      media: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=600&q=80",
+      media:
+        "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=600&q=80",
     },
-    createdAt: "11h ago",
+    createdAt: "2026-08-15T03:30:00.000Z",
+    updatedAt: "2026-08-15T03:30:00.000Z",
     viewed: false,
   },
 
@@ -115,9 +127,11 @@ const dummyStories = [
     },
     story: {
       type: "image",
-      media: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=600&q=80",
+      media:
+        "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=600&q=80",
     },
-    createdAt: "12h ago",
+    createdAt: "2026-08-15T02:30:00.000Z",
+    updatedAt: "2026-08-15T02:30:00.000Z",
     viewed: true,
   },
 ];

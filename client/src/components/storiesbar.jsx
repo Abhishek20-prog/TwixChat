@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import dummyStories from "../data/dummystories";
+import moment from 'moment'
 
 const StoriesBar = () => {
   const [stories, setStories] = useState([]);
@@ -430,7 +431,7 @@ const StoriesBar = () => {
                         mt-1
                       "
                     >
-                      {story.createdAt}
+                      {moment(story.createdAt).fromNow()}
                     </p>
 
                   </div>
