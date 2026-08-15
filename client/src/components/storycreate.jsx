@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ArrowLeft, ImageIcon, TextIcon } from "lucide-react";
+import { ArrowLeft, ImageIcon, TextIcon, UploadIcon } from "lucide-react";
 
 const storyGradients = [
  "linear-gradient(135deg, #155E63 0%, #58A6A6 100%)",
@@ -216,8 +216,8 @@ const Storycreate = ({
     className="hidden"
   />
 
-  <ImageIcon size={18}/>
-  Media
+  <UploadIcon size={18}/>
+  Image / Video
 </label>
 </div>
         </div>
