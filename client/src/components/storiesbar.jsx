@@ -12,12 +12,14 @@ import {
 import dummyStories from "../data/dummystories";
 import moment from "moment";
 import Storycreate from "./storycreate";
+import Storyviewer from "./storyviewer";
 
 const StoriesBar = () => {
   const [stories, setStories] = useState([]);
   const [startIndex, setStartIndex] = useState(0);
   const [direction, setDirection] = useState(1);
   const [showmodal, setshowmodal] = useState(false);
+  const [viewstory , setviewstory]=useState(false)
 
   const CARDS_PER_PAGE = 5;
 
@@ -271,6 +273,9 @@ const StoriesBar = () => {
                   shrink-0
                   cursor-pointer
                 "
+                onClick={()=>{
+                    setviewstory(story)
+                }}
               >
 
                 <div
@@ -603,7 +608,12 @@ const StoriesBar = () => {
           setshowmodal={setshowmodal}
           fetchstories={fetchstories}
         />
+
       )}
+      {viewstory && (<Storyviewer
+      viewstory={viewstory}
+      setviewstory={setviewstory}
+      />)}
 
     </div>
   );
