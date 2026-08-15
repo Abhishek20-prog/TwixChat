@@ -1,28 +1,56 @@
 import React, { useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+} from "lucide-react";
+import {
+  motion,
+  AnimatePresence,
+} from "framer-motion";
+
 import dummyStories from "../data/dummystories";
-import moment from 'moment'
+import moment from "moment";
+import Storycreate from "./storycreate";
 
 const StoriesBar = () => {
   const [stories, setStories] = useState([]);
   const [startIndex, setStartIndex] = useState(0);
   const [direction, setDirection] = useState(1);
+  const [showmodal, setshowmodal] = useState(false);
 
   const CARDS_PER_PAGE = 5;
+
+  // =========================
+  // LOAD STORIES
+  // =========================
 
   useEffect(() => {
     setStories(dummyStories);
   }, []);
 
   // =========================
+  // REFRESH STORIES
+  // =========================
+
+  const fetchstories = () => {
+    setStories([...dummyStories]);
+  };
+
+  // =========================
   // NEXT
   // =========================
 
   const handleNext = () => {
-    if (startIndex + CARDS_PER_PAGE < stories.length) {
+    if (
+      startIndex + CARDS_PER_PAGE <
+      stories.length
+    ) {
       setDirection(1);
-      setStartIndex((prev) => prev + CARDS_PER_PAGE);
+
+      setStartIndex(
+        (prev) => prev + CARDS_PER_PAGE
+      );
     }
   };
 
@@ -33,7 +61,10 @@ const StoriesBar = () => {
   const handlePrevious = () => {
     if (startIndex > 0) {
       setDirection(-1);
-      setStartIndex((prev) => prev - CARDS_PER_PAGE);
+
+      setStartIndex(
+        (prev) => prev - CARDS_PER_PAGE
+      );
     }
   };
 
@@ -61,7 +92,10 @@ const StoriesBar = () => {
             key={startIndex}
             custom={direction}
             initial={{
-              x: direction > 0 ? 450 : -450,
+              x:
+                direction > 0
+                  ? 450
+                  : -450,
               opacity: 0,
             }}
             animate={{
@@ -69,7 +103,10 @@ const StoriesBar = () => {
               opacity: 1,
             }}
             exit={{
-              x: direction > 0 ? -450 : 450,
+              x:
+                direction > 0
+                  ? -450
+                  : 450,
               opacity: 0,
             }}
             transition={{
@@ -97,6 +134,9 @@ const StoriesBar = () => {
                 whileTap={{
                   scale: 0.98,
                 }}
+                onClick={() =>
+                  setshowmodal(true)
+                }
                 className="
                   group
                   relative
@@ -141,9 +181,18 @@ const StoriesBar = () => {
                     "
                   />
 
-                  {/* Plus Icon */}
+                  {/* Plus */}
 
-                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <div
+                    className="
+                      absolute
+                      inset-0
+                      flex
+                      flex-col
+                      items-center
+                      justify-center
+                    "
+                  >
 
                     <div
                       className="
@@ -161,11 +210,13 @@ const StoriesBar = () => {
                         group-hover:bg-[#F26B4D]
                       "
                     >
+
                       <Plus
                         size={27}
                         strokeWidth={2}
                         className="text-white"
                       />
+
                     </div>
 
                     <p
@@ -181,7 +232,13 @@ const StoriesBar = () => {
                       Create Story
                     </p>
 
-                    <p className="mt-1 text-[10px] text-[#819493]">
+                    <p
+                      className="
+                        mt-1
+                        text-[10px]
+                        text-[#819493]
+                      "
+                    >
                       Share your moment
                     </p>
 
@@ -192,12 +249,12 @@ const StoriesBar = () => {
               </motion.div>
             )}
 
-
             {/* ================================= */}
             {/* STORY CARDS */}
             {/* ================================= */}
 
             {visibleStories.map((story) => (
+
               <motion.div
                 key={story.id}
                 whileHover={{
@@ -215,10 +272,6 @@ const StoriesBar = () => {
                   cursor-pointer
                 "
               >
-
-                {/* ============================= */}
-                {/* MAIN CARD */}
-                {/* ============================= */}
 
                 <div
                   className={`
@@ -241,13 +294,14 @@ const StoriesBar = () => {
                   `}
                 >
 
-                  {/* ============================= */}
-                  {/* STORY MEDIA */}
-                  {/* ============================= */}
+                  {/* MEDIA */}
 
-                  {story.story.type === "video" ? (
+                  {story.story.type ===
+                  "video" ? (
                     <video
-                      src={story.story.media}
+                      src={
+                        story.story.media
+                      }
                       className="
                         absolute
                         inset-0
@@ -265,8 +319,12 @@ const StoriesBar = () => {
                     />
                   ) : (
                     <img
-                      src={story.story.media}
-                      alt={story.user.name}
+                      src={
+                        story.story.media
+                      }
+                      alt={
+                        story.user.name
+                      }
                       className="
                         absolute
                         inset-0
@@ -280,10 +338,7 @@ const StoriesBar = () => {
                     />
                   )}
 
-
-                  {/* ============================= */}
-                  {/* DARK GRADIENT */}
-                  {/* ============================= */}
+                  {/* GRADIENT */}
 
                   <div
                     className="
@@ -296,10 +351,7 @@ const StoriesBar = () => {
                     "
                   />
 
-
-                  {/* ============================= */}
-                  {/* DECORATIVE CORNER */}
-                  {/* ============================= */}
+                  {/* CORNER */}
 
                   <div
                     className="
@@ -314,10 +366,7 @@ const StoriesBar = () => {
                     "
                   />
 
-
-                  {/* ============================= */}
-                  {/* PROFILE IMAGE */}
-                  {/* ============================= */}
+                  {/* PROFILE */}
 
                   <div
                     className={`
@@ -348,8 +397,12 @@ const StoriesBar = () => {
                     >
 
                       <img
-                        src={story.user.dp}
-                        alt={story.user.name}
+                        src={
+                          story.user.dp
+                        }
+                        alt={
+                          story.user.name
+                        }
                         className="
                           w-full
                           h-full
@@ -362,10 +415,7 @@ const StoriesBar = () => {
 
                   </div>
 
-
-                  {/* ============================= */}
                   {/* STORY TYPE */}
-                  {/* ============================= */}
 
                   <div
                     className="
@@ -385,7 +435,8 @@ const StoriesBar = () => {
                     "
                   >
 
-                    {story.story.type === "video" ? (
+                    {story.story.type ===
+                    "video" ? (
                       <span className="text-[9px] text-[#155E63]">
                         ▶
                       </span>
@@ -397,10 +448,7 @@ const StoriesBar = () => {
 
                   </div>
 
-
-                  {/* ============================= */}
                   {/* USER INFO */}
-                  {/* ============================= */}
 
                   <div
                     className="
@@ -431,7 +479,9 @@ const StoriesBar = () => {
                         mt-1
                       "
                     >
-                      {moment(story.createdAt).from}
+                      {moment(
+                        story.createdAt
+                      ).fromNow()}
                     </p>
 
                   </div>
@@ -439,6 +489,7 @@ const StoriesBar = () => {
                 </div>
 
               </motion.div>
+
             ))}
 
           </motion.div>
@@ -447,9 +498,8 @@ const StoriesBar = () => {
 
       </div>
 
-
       {/* ================================= */}
-      {/* PREVIOUS BUTTON */}
+      {/* PREVIOUS */}
       {/* ================================= */}
 
       {startIndex > 0 && (
@@ -495,12 +545,13 @@ const StoriesBar = () => {
         </motion.button>
       )}
 
-
       {/* ================================= */}
-      {/* NEXT BUTTON */}
+      {/* NEXT */}
       {/* ================================= */}
 
-      {startIndex + CARDS_PER_PAGE < stories.length && (
+      {startIndex +
+        CARDS_PER_PAGE <
+        stories.length && (
         <motion.button
           initial={{
             opacity: 0,
@@ -541,6 +592,17 @@ const StoriesBar = () => {
         >
           <ChevronRight size={20} />
         </motion.button>
+      )}
+
+      {/* ================================= */}
+      {/* CREATE STORY MODAL */}
+      {/* ================================= */}
+
+      {showmodal && (
+        <Storycreate
+          setshowmodal={setshowmodal}
+          fetchstories={fetchstories}
+        />
       )}
 
     </div>
