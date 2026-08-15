@@ -1,8 +1,8 @@
 import React, { useState } from "react";
-import { ArrowLeft, ImageIcon, TextIcon, UploadIcon } from "lucide-react";
+import { ArrowLeft, Sparkles, TextIcon, UploadIcon } from "lucide-react";
 
 const storyGradients = [
- "linear-gradient(135deg, #155E63 0%, #58A6A6 100%)",
+  "linear-gradient(135deg, #155E63 0%, #58A6A6 100%)",
 
   "linear-gradient(135deg, #F26B4D 0%, #F9B233 100%)",
 
@@ -145,81 +145,111 @@ const Storycreate = ({
         >
 
           {/* Your creator UI goes here */}
-          <div className='rounded-lg h-96 flex items-center justify-center relative' style={{background: background}}>
+          <div className='rounded-lg h-96 flex items-center justify-center relative' style={{ background: background }}>
 
-  {mode === 'text' && (
-    <textarea
-      className='bg-transparent text-white w-full h-full p-6 text-lg resize-none focus:outline-none'
-      placeholder="What's on your mind?"
-      onChange={(e) => settext(e.target.value)}
-      value={text}
-    />
-  )}
-  {
-  mode === 'media' && purl && (
-    media?.type.startsWith('image') ? (
-      <img
-        src={purl}
-        alt=""
-        className="object-contain max-h-full"
-      />
-    ) : (
-      <video
-        src={purl}
-        className="object-contain max-h-full"
-      />
-    )
-  )
-}
+            {mode === 'text' && (
+              <textarea
+                className='bg-transparent text-white w-full h-full p-6 text-lg resize-none focus:outline-none'
+                placeholder="What's on your mind?"
+                onChange={(e) => settext(e.target.value)}
+                value={text}
+              />
+            )}
+            {
+              mode === 'media' && purl && (
+                media?.type.startsWith('image') ? (
+                  <img
+                    src={purl}
+                    alt=""
+                    className="object-contain max-h-full"
+                  />
+                ) : (
+                  <video
+                    src={purl}
+                    className="object-contain max-h-full"
+                  />
+                )
+              )
+            }
 
-</div>
-<div className="flex mt-4 gap-2">
-  {storyGradients.map((gradient) => (
-    <button
-      key={gradient}
-      className="w-7 h-7 rounded-full ring-1 ring-white/30 cursor-pointer hover:scale-110 transition-transform"
-      style={{ background: gradient }}
-      onClick={() => setbackground(gradient)}
-    />
-  ))}
-</div>
-<div className="flex gap-2 mt-4">
-  <button
-    onClick={() => {
-      setmode("text");
-      setmedia(null);
-      setpurl(null);
-    }}
-    className={`flex-1 flex items-center justify-center gap-2 p-2 rounded-lg font-medium transition-all duration-200 ${
-      mode === "text"
-        ? "bg-[#155E63] text-white shadow-md"
-        : "bg-[#E8F3F2] text-[#155E63] border border-[#B8CDCA] hover:bg-[#D7EAE8]"
-    }`}
-  >
-    <TextIcon size={18} />
-    Text
-  </button>
-  <label
-  className={`flex-1 flex items-center justify-center gap-2 p-2 rounded-lg cursor-pointer font-medium transition-all duration-200 ${
-    mode === "media"
-      ? "bg-[#F26B4D] text-white shadow-md"
-      : "bg-[#FDF0EC] text-[#E85A3F] border border-[#F5C4B8] hover:bg-[#FBE4DE]"
-  }`}
->
-  <input
-    onChange={(e) => {
-      handlemediaupload(e);
-      setmode("media");
-    }}
-    type="file"
-    accept="image/*, video/*"
-    className="hidden"
-  />
+          </div>
+          <div className="flex mt-4 gap-2">
+            {storyGradients.map((gradient) => (
+              <button
+                key={gradient}
+                className="w-7 h-7 rounded-full ring-1 ring-white/30 cursor-pointer hover:scale-110 transition-transform"
+                style={{ background: gradient }}
+                onClick={() => setbackground(gradient)}
+              />
+            ))}
+          </div>
+          <div className="flex gap-2 mt-4">
+            <button
+              onClick={() => {
+                setmode("text");
+                setmedia(null);
+                setpurl(null);
+              }}
+              className={`flex-1 flex items-center cursor-pointer justify-center gap-2 p-2 rounded-lg font-medium transition-all duration-200 ${mode === "text"
+                  ? "bg-[#155E63] text-white shadow-md"
+                  : "bg-[#E8F3F2] text-[#155E63] border border-[#B8CDCA] hover:bg-[#D7EAE8]"
+                }`}
+            >
+              <TextIcon size={18} />
+              Text
+            </button>
+            <label
+              className={`flex-1 flex items-center justify-center gap-2 p-2 rounded-lg cursor-pointer font-medium transition-all duration-200 ${mode === "media"
+                  ? "bg-[#F26B4D] text-white shadow-md"
+                  : "bg-[#FDF0EC] text-[#E85A3F] border border-[#F5C4B8] hover:bg-[#FBE4DE]"
+                }`}
+            >
+              <input
+                onChange={(e) => {
+                  handlemediaupload(e);
+                  setmode("media");
+                }}
+                type="file"
+                accept="image/*, video/*"
+                className="hidden"
+              />
 
-  <UploadIcon size={18}/>
-  Image / Video
-</label>
-</div>
+              <UploadIcon size={18} />
+              Image / Video
+            </label>
+          </div>
+          <button  className="
+    flex
+    items-center
+    justify-center
+    gap-2
+    text-white
+    py-3
+    mt-4
+    w-full
+    rounded-lg
+    font-semibold
+
+    bg-gradient-to-r
+    from-[#155E63]
+    via-[#F26B4D]
+    to-[#F9B233]
+
+    hover:from-[#124F53]
+    hover:via-[#E85A3F]
+    hover:to-[#E5A21F]
+
+    active:scale-95
+    transition-all
+    duration-300
+
+    cursor-pointer
+    shadow-md
+    hover:shadow-lg
+  ">
+            <Sparkles size={18}/> Create
+          </button>
+
         </div>
 
       </div>

@@ -50,7 +50,7 @@ const Feed = () => {
           <div className="w-full">
 
             <h1 className="text-xl font-semibold text-[#17383A] mb-5">
-              Feed
+             
             </h1>
 
             <div className="space-y-5">
