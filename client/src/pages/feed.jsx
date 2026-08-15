@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import dummyPosts from "../data/dummypost";
 import Loading from "../components/loading";
+import Storiesbar from "../components/storiesbar";
+import StoriesBar from "../components/storiesbar";
 
 const Feed = () => {
   const [feed, setFeed] = useState([]);
@@ -35,31 +37,19 @@ const Feed = () => {
 
           <div className="bg-white border border-[#E8E2D8] rounded-2xl p-5 shadow-sm">
 
-            <div className="flex items-center justify-between mb-5">
+  <div className="flex items-center justify-between mb-4">
+    <h1 className="text-xl font-semibold text-[#17383A]">
+      Stories
+    </h1>
 
-              <h1 className="text-xl font-semibold text-[#17383A]">
-                Stories
-              </h1>
+    <button className="text-sm font-medium text-[#155E63] hover:text-[#F26B4D]">
+      See all
+    </button>
+  </div>
 
-              <button
-                className="
-                  text-sm
-                  font-medium
-                  text-[#155E63]
-                  hover:text-[#F26B4D]
-                  transition-colors
-                "
-              >
-                See all
-              </button>
+  <StoriesBar/>
 
-            </div>
-
-            <div className="p-4">
-              {/* Stories will be added separately */}
-            </div>
-
-          </div>
+</div>
 
 
           {/* ================= POST LIST ================= */}
