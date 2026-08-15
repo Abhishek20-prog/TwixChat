@@ -1,19 +1,20 @@
 import React, { useEffect, useState } from "react";
+import moment from "moment";
+
 import dummyPosts from "../data/dummypost";
 import Loading from "../components/loading";
-import Storiesbar from "../components/storiesbar";
 import StoriesBar from "../components/storiesbar";
 
 const Feed = () => {
   const [feed, setFeed] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchFeed = () => {
-      setFeed(dummyPosts);
-      setLoading(false);
-    };
+  const fetchFeed = () => {
+    setFeed(dummyPosts);
+    setLoading(false);
+  };
 
+  useEffect(() => {
     fetchFeed();
   }, []);
 
@@ -22,392 +23,362 @@ const Feed = () => {
   }
 
   return (
-    <div className="h-full overflow-y-auto no-scrollbar bg-[#FFFAF2] py-6 px-4 xl:pr-5">
+    <div className="h-full overflow-y-scroll no-scrollbar py-8 px-4 xl:px-6">
+      
+      {/* ========================= */}
+      {/* MAIN LAYOUT */}
+      {/* ========================= */}
 
-      {/* Main Container */}
-      <div className="w-full max-w-6xl mx-auto flex gap-6">
+      <div className="w-full max-w-[1400px] mx-auto flex gap-6">
 
-        {/* ================================================= */}
+        {/* ========================= */}
         {/* MAIN FEED */}
-        {/* ================================================= */}
+        {/* ========================= */}
 
-        <div className="flex-1 min-w-0 space-y-6">
+        <div className="flex-1 min-w-0">
 
-          {/* ================= STORIES ================= */}
+          {/* Stories */}
 
-          <div className="bg-white border border-[#E8E2D8] rounded-2xl p-5 shadow-sm">
+          <div className="mb-8">
+            <StoriesBar />
+          </div>
 
-  <div className="flex items-center justify-between mb-4">
-    <h1 className="text-xl font-semibold text-[#17383A]">
-      Stories
-    </h1>
+          {/* ========================= */}
+          {/* POST FEED */}
+          {/* ========================= */}
 
-    <button className="text-sm font-medium text-[#155E63] hover:text-[#F26B4D]">
-      See all
-    </button>
-  </div>
+          <div className="w-full">
 
-  <StoriesBar/>
+            <h1 className="text-xl font-semibold text-[#17383A] mb-5">
+              Feed
+            </h1>
 
-</div>
+            <div className="space-y-5">
+
+              {feed.map((post) => (
+
+                <div
+                  key={post.id}
+                  className="
+                    w-full
+                    rounded-[28px]
+                    bg-white/80
+                    border
+                    border-[#E8E2D8]
+                    shadow-sm
+                    p-5
+                    transition-all
+                    duration-300
+                    hover:shadow-md
+                  "
+                >
+
+                  {/* ========================= */}
+                  {/* USER INFO */}
+                  {/* ========================= */}
+
+                  <div className="flex items-center justify-between">
+
+                    <div className="flex items-center gap-3">
+
+                      <img
+                        src={post.user.dp}
+                        alt={post.user.name}
+                        className="
+                          w-11
+                          h-11
+                          rounded-full
+                          object-cover
+                          border-2
+                          border-[#DCE8E6]
+                        "
+                      />
+
+                      <div>
+
+                        <h2 className="text-sm font-semibold text-[#17383A]">
+                          {post.user.name}
+                        </h2>
+
+                        <p className="text-xs text-[#819493]">
+                          {post.user.username} · Posted{" "}
+                          {moment(post.createdAt).fromNow()}
+                        </p>
+
+                      </div>
+
+                    </div>
 
 
-          {/* ================= POST LIST ================= */}
+                    {/* More button */}
 
-          <div className="space-y-5">
+                    <button
+                      className="
+                        w-8
+                        h-8
+                        rounded-full
+                        flex
+                        items-center
+                        justify-center
+                        text-[#819493]
+                        hover:bg-[#F1F7F6]
+                        transition
+                      "
+                    >
+                      •••
+                    </button>
 
-            {/* Posts will be added separately */}
+                  </div>
+
+
+                  {/* ========================= */}
+                  {/* POST CONTENT */}
+                  {/* ========================= */}
+
+                  <div className="mt-4">
+
+                    {/* ========================= */}
+                    {/* TEXT POST */}
+                    {/* ========================= */}
+
+                    {post.type === "text" && (
+
+                      <p className="text-[15px] leading-7 text-[#365455]">
+                        {post.content}
+                      </p>
+
+                    )}
+
+
+                    {/* ========================= */}
+                    {/* PHOTO POST */}
+                    {/* ========================= */}
+
+                    {post.type === "photo" && (
+
+                      <>
+
+                        <p className="text-[15px] leading-7 text-[#365455] mb-4">
+                          {post.content}
+                        </p>
+
+                        <img
+                          src={post.image}
+                          alt="Post"
+                          loading="lazy"
+                          className="
+                            w-full
+                            max-h-[500px]
+                            object-cover
+                            rounded-[22px]
+                            block
+                          "
+                        />
+
+                      </>
+
+                    )}
+
+
+                    {/* ========================= */}
+                    {/* VIDEO POST */}
+                    {/* ========================= */}
+
+                   {/* VIDEO POST */}
+{post.type === "video" && (
+  <>
+    <p className="text-[15px] leading-7 text-[#365455] mb-4">
+      {post.content}
+    </p>
+
+    <div
+      className="
+        w-full
+        overflow-hidden
+        rounded-[22px]
+        bg-black
+      "
+    >
+      <video
+        src={post.video}
+        poster={post.thumbnail}
+        autoPlay
+        muted
+        playsInline
+        controls
+        preload="metadata"
+        className="
+          w-full
+          max-h-[500px]
+          object-contain
+          bg-black
+          block
+          cursor-pointer
+        "
+      >
+        Your browser does not support the video tag.
+      </video>
+    </div>
+  </>
+)}
+
+                  </div>
+
+
+                  {/* ========================= */}
+                  {/* POST ACTIONS */}
+                  {/* ========================= */}
+
+                  <div
+                    className="
+                      flex
+                      items-center
+                      gap-6
+                      mt-5
+                      pt-4
+                      border-t
+                      border-[#E8E2D8]
+                    "
+                  >
+
+                    {/* Likes */}
+
+                    <button
+                      className="
+                        text-sm
+                        text-[#819493]
+                        hover:text-[#F26B4D]
+                        transition
+                      "
+                    >
+                      ♡ {post.likes}
+                    </button>
+
+
+                    {/* Comments */}
+
+                    <button
+                      className="
+                        text-sm
+                        text-[#819493]
+                        hover:text-[#155E63]
+                        transition
+                      "
+                    >
+                      💬 {post.comments}
+                    </button>
+
+
+                    {/* Share */}
+
+                    <button
+                      className="
+                        ml-auto
+                        text-sm
+                        text-[#819493]
+                        hover:text-[#155E63]
+                        transition
+                      "
+                    >
+                      Share
+                    </button>
+
+                  </div>
+
+                </div>
+
+              ))}
+
+            </div>
 
           </div>
 
         </div>
 
 
-        {/* ================================================= */}
+        {/* ========================= */}
         {/* RIGHT SIDEBAR */}
-        {/* ================================================= */}
+        {/* ========================= */}
 
-        <aside className="hidden xl:flex w-[290px] shrink-0 flex-col gap-5">
+        <div
+          className="
+            hidden
+            xl:flex
+            w-[280px]
+            shrink-0
+            flex-col
+            gap-6
+          "
+        >
 
-          {/* ================= SPONSORED ================= */}
+          {/* ========================= */}
+          {/* SPONSORED */}
+          {/* ========================= */}
 
-          <div className="bg-white border border-[#E8E2D8] rounded-2xl p-5 shadow-sm">
+          <div
+            className="
+              rounded-[28px]
+              bg-white/70
+              border
+              border-[#E8E2D8]
+              p-5
+              shadow-sm
+            "
+          >
 
-            <div className="flex items-center justify-between mb-5">
+            <h2 className="text-[15px] font-semibold text-[#17383A]">
+              Sponsored
+            </h2>
 
-              <h2 className="text-[#17383A] font-semibold">
-                Sponsored
-              </h2>
-
-              <button
-                className="
-                  text-xs
-                  font-medium
-                  text-[#7B8989]
-                  hover:text-[#155E63]
-                  transition-colors
-                "
-              >
-                See all
-              </button>
-
-            </div>
-
-
-            <div className="space-y-5">
-
-              {/* Sponsored Item 1 */}
-
-              <div className="flex gap-3 cursor-pointer group">
-
-                <div
-                  className="
-                    w-12
-                    h-12
-                    rounded-xl
-                    bg-[#E8F4F3]
-                    border
-                    border-[#D5E9E7]
-                    flex
-                    items-center
-                    justify-center
-                    shrink-0
-                  "
-                >
-                  <span className="text-[#155E63] font-bold">
-                    AI
-                  </span>
-                </div>
-
-                <div className="min-w-0">
-
-                  <h3
-                    className="
-                      text-sm
-                      font-semibold
-                      text-[#17383A]
-                      group-hover:text-[#155E63]
-                      transition-colors
-                    "
-                  >
-                    AI Learning Platform
-                  </h3>
-
-                  <p className="text-xs text-[#6B8586] mt-1 leading-4 line-clamp-2">
-                    Learn smarter with AI-powered tools.
-                  </p>
-
-                  <span className="text-[10px] text-[#A5AEAE] mt-1 block">
-                    Sponsored
-                  </span>
-
-                </div>
-
-              </div>
-
-
-              {/* Sponsored Item 2 */}
-
-              <div className="flex gap-3 cursor-pointer group">
-
-                <div
-                  className="
-                    w-12
-                    h-12
-                    rounded-xl
-                    bg-[#FFF1EC]
-                    border
-                    border-[#F8DDD4]
-                    flex
-                    items-center
-                    justify-center
-                    shrink-0
-                  "
-                >
-                  <span className="text-[#F26B4D] font-bold">
-                    DS
-                  </span>
-                </div>
-
-                <div className="min-w-0">
-
-                  <h3
-                    className="
-                      text-sm
-                      font-semibold
-                      text-[#17383A]
-                      group-hover:text-[#F26B4D]
-                      transition-colors
-                    "
-                  >
-                    Developer Courses
-                  </h3>
-
-                  <p className="text-xs text-[#6B8586] mt-1 leading-4 line-clamp-2">
-                    Improve your coding skills and build better projects.
-                  </p>
-
-                  <span className="text-[10px] text-[#A5AEAE] mt-1 block">
-                    Sponsored
-                  </span>
-
-                </div>
-
-              </div>
-
-            </div>
+            <div
+              className="
+                mt-4
+                h-[120px]
+                rounded-[20px]
+                bg-[#F8FCFB]
+                border
+                border-dashed
+                border-[#C9D2D0]
+              "
+            />
 
           </div>
 
 
-          {/* ================= RECENT MESSAGES ================= */}
+          {/* ========================= */}
+          {/* RECENT MESSAGES */}
+          {/* ========================= */}
 
-          <div className="bg-white border border-[#E8E2D8] rounded-2xl p-5 shadow-sm">
+          <div
+            className="
+              rounded-[28px]
+              bg-white/70
+              border
+              border-[#E8E2D8]
+              p-5
+              shadow-sm
+            "
+          >
 
-            <div className="flex items-center justify-between mb-5">
+            <h2 className="text-[15px] font-semibold text-[#17383A]">
+              Recent Messages
+            </h2>
 
-              <h2 className="text-[#17383A] font-semibold">
-                Recent Messages
-              </h2>
-
-              <button
-                className="
-                  text-xs
-                  font-medium
-                  text-[#7B8989]
-                  hover:text-[#155E63]
-                  transition-colors
-                "
-              >
-                See all
-              </button>
-
-            </div>
-
-
-            <div className="space-y-5">
-
-              {/* ================= MESSAGE 1 ================= */}
-
-              <div className="flex items-center gap-3 cursor-pointer group">
-
-                <img
-                  src="/assets/dp_riya.jpg"
-                  alt="Riya Sharma"
-                  className="
-                    w-10
-                    h-10
-                    rounded-full
-                    object-cover
-                    shrink-0
-                    border
-                    border-[#E8E2D8]
-                  "
-                />
-
-                <div className="min-w-0 flex-1">
-
-                  <div className="flex items-center justify-between gap-2">
-
-                    <h3
-                      className="
-                        text-sm
-                        font-semibold
-                        text-[#17383A]
-                        truncate
-                        group-hover:text-[#155E63]
-                        transition-colors
-                      "
-                    >
-                      Riya Sharma
-                    </h3>
-
-                    <span className="text-[10px] text-[#A5AEAE] shrink-0">
-                      2m
-                    </span>
-
-                  </div>
-
-                  <p className="text-xs text-[#6B8586] truncate mt-1">
-                    Hey! Are you free today?
-                  </p>
-
-                </div>
-
-              </div>
-
-
-              {/* ================= MESSAGE 2 ================= */}
-
-              <div className="flex items-center gap-3 cursor-pointer group">
-
-                <img
-                  src="/assets/dp_rohan.jpg"
-                  alt="Rohan Kumar"
-                  className="
-                    w-10
-                    h-10
-                    rounded-full
-                    object-cover
-                    shrink-0
-                    border
-                    border-[#E8E2D8]
-                  "
-                />
-
-                <div className="min-w-0 flex-1">
-
-                  <div className="flex items-center justify-between gap-2">
-
-                    <h3
-                      className="
-                        text-sm
-                        font-semibold
-                        text-[#17383A]
-                        truncate
-                        group-hover:text-[#155E63]
-                        transition-colors
-                      "
-                    >
-                      Rohan Kumar
-                    </h3>
-
-                    <span className="text-[10px] text-[#A5AEAE] shrink-0">
-                      15m
-                    </span>
-
-                  </div>
-
-                  <p className="text-xs text-[#6B8586] truncate mt-1">
-                    Check out the new project!
-                  </p>
-
-                </div>
-
-              </div>
-
-
-              {/* ================= MESSAGE 3 ================= */}
-
-              <div className="flex items-center gap-3 cursor-pointer group">
-
-                <img
-                  src="/assets/dp_ananya.jpg"
-                  alt="Ananya Singh"
-                  className="
-                    w-10
-                    h-10
-                    rounded-full
-                    object-cover
-                    shrink-0
-                    border
-                    border-[#E8E2D8]
-                  "
-                />
-
-                <div className="min-w-0 flex-1">
-
-                  <div className="flex items-center justify-between gap-2">
-
-                    <h3
-                      className="
-                        text-sm
-                        font-semibold
-                        text-[#17383A]
-                        truncate
-                        group-hover:text-[#155E63]
-                        transition-colors
-                      "
-                    >
-                      Ananya Singh
-                    </h3>
-
-                    <span className="text-[10px] text-[#A5AEAE] shrink-0">
-                      1h
-                    </span>
-
-                  </div>
-
-                  <p className="text-xs text-[#6B8586] truncate mt-1">
-                    Thanks for your help! 😊
-                  </p>
-
-                </div>
-
-              </div>
-
-            </div>
+            <div
+              className="
+                mt-4
+                h-[180px]
+                rounded-[20px]
+                bg-[#F8FCFB]
+                border
+                border-dashed
+                border-[#C9D2D0]
+              "
+            />
 
           </div>
 
-
-          {/* ================= FOOTER ================= */}
-
-          <div className="px-2 py-2">
-
-            <p className="text-[11px] text-[#9AA5A5] leading-5">
-              © 2026 TwixChat
-            </p>
-
-            <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1">
-
-              <button className="text-[11px] text-[#9AA5A5] hover:text-[#155E63]">
-                Privacy
-              </button>
-
-              <button className="text-[11px] text-[#9AA5A5] hover:text-[#155E63]">
-                Terms
-              </button>
-
-              <button className="text-[11px] text-[#9AA5A5] hover:text-[#155E63]">
-                Help
-              </button>
-
-            </div>
-
-          </div>
-
-        </aside>
+        </div>
 
       </div>
 

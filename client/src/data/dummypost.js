@@ -4,7 +4,7 @@ const dummyPosts = [
     user: {
       name: "Abhishek Kumar",
       username: "@abhishek",
-      dp: "/assets/dp_abhishek.jpg",
+      dp: "https://i.pravatar.cc/150?img=11",
     },
     type: "text",
     content:
@@ -20,11 +20,12 @@ const dummyPosts = [
     user: {
       name: "Riya Sharma",
       username: "@riya",
-      dp: "/assets/dp_riya.jpg",
+      dp: "https://i.pravatar.cc/150?img=47",
     },
     type: "photo",
     content: "Weekend project progress is looking amazing! 💻✨",
-    image: "/assets/post_photo_1.jpg",
+    image:
+      "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=1200&q=80",
     createdAt: "2026-08-15T10:30:00.000Z",
     updatedAt: "2026-08-15T10:30:00.000Z",
     likes: 86,
@@ -36,11 +37,19 @@ const dummyPosts = [
     user: {
       name: "Rohan Kumar",
       username: "@rohan",
-      dp: "/assets/dp_rohan.jpg",
+      dp: "https://i.pravatar.cc/150?img=12",
     },
     type: "video",
     content: "Quick demo of what I've been building this week 🎥",
-    video: "/assets/post_video_1.mp4",
+
+    // Direct MP4 video
+    video:
+      "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
+
+    // Thumbnail displayed before video starts
+    thumbnail:
+      "https://images.unsplash.com/photo-1497250681960-ef046c08a56e?w=1200&q=80",
+
     createdAt: "2026-08-15T08:30:00.000Z",
     updatedAt: "2026-08-15T08:30:00.000Z",
     likes: 63,
@@ -52,11 +61,12 @@ const dummyPosts = [
     user: {
       name: "Ananya Singh",
       username: "@ananya",
-      dp: "/assets/dp_ananya.jpg",
+      dp: "https://i.pravatar.cc/150?img=32",
     },
     type: "photo",
     content: "A productive day at college 📚☕",
-    image: "/assets/post_photo_2.jpg",
+    image:
+      "https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=1200&q=80",
     createdAt: "2026-08-14T14:30:00.000Z",
     updatedAt: "2026-08-14T14:30:00.000Z",
     likes: 109,
@@ -68,7 +78,7 @@ const dummyPosts = [
     user: {
       name: "Vikram Patel",
       username: "@vikram",
-      dp: "/assets/dp_vikram.jpg",
+      dp: "https://randomuser.me/api/portraits/men/32.jpg",
     },
     type: "text",
     content:

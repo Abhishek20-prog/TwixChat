@@ -431,7 +431,7 @@ const StoriesBar = () => {
                         mt-1
                       "
                     >
-                      {moment(story.createdAt).fromNow()}
+                      {moment(story.createdAt).from}
                     </p>
 
                   </div>
