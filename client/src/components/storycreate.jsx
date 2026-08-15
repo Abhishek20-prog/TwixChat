@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, TextIcon } from "lucide-react";
 
 const storyGradients = [
  "linear-gradient(135deg, #155E63 0%, #58A6A6 100%)",
@@ -182,6 +182,9 @@ const Storycreate = ({
       onClick={() => setbackground(gradient)}
     />
   ))}
+</div>
+<div>
+  <TextIcon/>
 </div>
 
         </div>
