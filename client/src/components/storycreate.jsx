@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ArrowLeft, TextIcon } from "lucide-react";
+import { ArrowLeft, ImageIcon, TextIcon } from "lucide-react";
 
 const storyGradients = [
  "linear-gradient(135deg, #155E63 0%, #58A6A6 100%)",
@@ -39,7 +39,7 @@ const Storycreate = ({
   // MEDIA SELECT
   // ==============================
 
-  const handlemedia = (e) => {
+  const handlemediaupload = (e) => {
     const file = e.target.files?.[0];
 
     if (file) {
@@ -183,10 +183,43 @@ const Storycreate = ({
     />
   ))}
 </div>
-<div>
-  <TextIcon/>
-</div>
+<div className="flex gap-2 mt-4">
+  <button
+    onClick={() => {
+      setmode("text");
+      setmedia(null);
+      setpurl(null);
+    }}
+    className={`flex-1 flex items-center justify-center gap-2 p-2 rounded-lg font-medium transition-all duration-200 ${
+      mode === "text"
+        ? "bg-[#155E63] text-white shadow-md"
+        : "bg-[#E8F3F2] text-[#155E63] border border-[#B8CDCA] hover:bg-[#D7EAE8]"
+    }`}
+  >
+    <TextIcon size={18} />
+    Text
+  </button>
+  <label
+  className={`flex-1 flex items-center justify-center gap-2 p-2 rounded-lg cursor-pointer font-medium transition-all duration-200 ${
+    mode === "media"
+      ? "bg-[#F26B4D] text-white shadow-md"
+      : "bg-[#FDF0EC] text-[#E85A3F] border border-[#F5C4B8] hover:bg-[#FBE4DE]"
+  }`}
+>
+  <input
+    onChange={(e) => {
+      handlemediaupload(e);
+      setmode("media");
+    }}
+    type="file"
+    accept="image/*, video/*"
+    className="hidden"
+  />
 
+  <ImageIcon size={18}/>
+  Media
+</label>
+</div>
         </div>
 
       </div>
