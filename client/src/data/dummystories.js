@@ -2,14 +2,14 @@ const dummyStories = [
   {
     id: 1,
     user: {
-      name: "Riya Sharma",
+      name: "Aayush Banarsuar",
       username: "@riya.sharma",
-      dp: "https://i.pravatar.cc/150?img=47",
+      dp: "https://plus.unsplash.com/premium_photo-1670573800532-a861ffeca229?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MXx8c2hvcnQlMjBibGFjayUyMG1hbnxlbnwwfHwwfHx8MA%3D%3D",
     },
     story: {
       type: "image",
       media:
-        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=600&q=80",
+        "https://plus.unsplash.com/premium_photo-1670573800532-a861ffeca229?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MXx8c2hvcnQlMjBibGFjayUyMG1hbnxlbnwwfHwwfHx8MA%3D%3D",
     },
     createdAt: "2026-08-15T02:30:00.000Z",
     updatedAt: "2026-08-15T12:30:00.000Z",
