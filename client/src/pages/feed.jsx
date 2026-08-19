@@ -5,6 +5,7 @@ import dummyPosts from "../data/dummypost";
 import Loading from "../components/loading";
 import StoriesBar from "../components/storiesbar";
 import PostCard from "../components/postcard";
+import Recentmessage from "../components/recentmessage";
 
 const Feed = () => {
   const [feed, setFeed] = useState([]);
@@ -112,35 +113,8 @@ const Feed = () => {
           {/* ========================= */}
           {/* RECENT MESSAGES */}
           {/* ========================= */}
-
-          <div
-            className="
-              rounded-[28px]
-              bg-white/70
-              border
-              border-[#E8E2D8]
-              p-5
-              shadow-sm
-            "
-          >
-
-            <h2 className="text-[15px] font-semibold text-[#17383A]">
-              Recent Messages
-            </h2>
-
-            <div
-              className="
-                mt-4
-                h-[180px]
-                rounded-[20px]
-                bg-[#F8FCFB]
-                border
-                border-dashed
-                border-[#C9D2D0]
-              "
-            />
-
-          </div>
+<Recentmessage/>
+          
 
         </div>
 
