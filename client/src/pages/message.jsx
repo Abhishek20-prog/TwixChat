@@ -19,7 +19,7 @@ const message = () => {
   );
 
   return (
-    <div className="min-h-screen bg-[#F8FCFB] px-6 py-8">
+    <div className="min-h-screen  bg-[#E8F5F3] px-6 py-8">
 
       {/* Page Header */}
       <div className="max-w-3xl mx-auto">
