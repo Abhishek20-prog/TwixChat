@@ -6,6 +6,7 @@ import Loading from "../components/loading";
 import StoriesBar from "../components/storiesbar";
 import PostCard from "../components/postcard";
 import Recentmessage from "../components/recentmessage";
+import Sponsered from "../components/sponsered";
 
 const Feed = () => {
   const [feed, setFeed] = useState([]);
@@ -79,35 +80,7 @@ const Feed = () => {
           {/* ========================= */}
           {/* SPONSORED */}
           {/* ========================= */}
-
-          <div
-            className="
-              rounded-[28px]
-              bg-white/70
-              border
-              border-[#E8E2D8]
-              p-5
-              shadow-sm
-            "
-          >
-
-            <h2 className="text-[15px] font-semibold text-[#17383A]">
-              Sponsored
-            </h2>
-
-            <div
-              className="
-                mt-4
-                h-[120px]
-                rounded-[20px]
-                bg-[#F8FCFB]
-                border
-                border-dashed
-                border-[#C9D2D0]
-              "
-            />
-
-          </div>
+<Sponsered/>
 
 
           {/* ========================= */}
