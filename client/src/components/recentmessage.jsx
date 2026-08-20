@@ -34,7 +34,7 @@ const RecentMessage = () => {
       <div className="mt-4 space-y-1">
         {recentMessages.map((message) => (
           <Link
-            to={`/messages/${message.user.id}`}
+            to={`/message/${message.user.id}`}
             key={message.id}
             className="
               flex
