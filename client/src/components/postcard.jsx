@@ -7,8 +7,10 @@ import {
   Bookmark,
   MoreHorizontal,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const PostCard = ({ post }) => {
+  const navigate = useNavigate()
   return (
     <div className="w-full max-w-lg mx-auto bg-white rounded-xl border border-gray-200 overflow-hidden">
 
@@ -19,6 +21,7 @@ const PostCard = ({ post }) => {
 
           {/* Profile Picture */}
           <img
+          onClick={()=>navigate('/profile/'+ post.user.id)}
             src={post.user.dp}
             alt={post.user.name}
             className="
@@ -37,6 +40,7 @@ const PostCard = ({ post }) => {
 
             {/* Name */}
             <h3
+            onClick={()=>navigate('/profile/'+ post.user.id)}
               className="
                 font-semibold text-sm
                 cursor-pointer
@@ -49,6 +53,7 @@ const PostCard = ({ post }) => {
 
             {/* Username */}
             <p
+            onClick={()=>navigate('/profile/'+ post.user.id)}
               className="
                 text-xs text-gray-500
                 cursor-pointer
