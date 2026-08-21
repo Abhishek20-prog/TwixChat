@@ -5,6 +5,7 @@ import dummyRecentMessages from "../data/dummyrecentmessage";
 
 const RecentMessage = () => {
   const [recentMessages, setRecentMessages] = useState([]);
+ 
 
   const fetchRecentMessages = () => {
     setRecentMessages(dummyRecentMessages);
