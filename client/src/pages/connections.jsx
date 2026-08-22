@@ -13,7 +13,8 @@ import dummyConnections from "../data/dummyconnection";
 import { useNavigate } from "react-router-dom";
 
 const Connections = () => {
-  const navigate = useNavigate()
+  const navigate = useNavigate();
+
   const [connections, setConnections] = useState([]);
   const [activeCategory, setActiveCategory] = useState("follower");
 
@@ -103,7 +104,8 @@ const Connections = () => {
     (category) => category.id === activeCategory
   );
 
-  const renderAction = () => {
+  // Action buttons
+  const renderAction = (connection) => {
     switch (activeCategory) {
       case "follower":
         return (
@@ -150,7 +152,6 @@ const Connections = () => {
       case "pending":
         return (
           <div className="flex items-center gap-2">
-
             <button
               className="
                 flex items-center gap-2
@@ -183,13 +184,15 @@ const Connections = () => {
             >
               <UserX size={15} />
             </button>
-
           </div>
         );
 
       case "connected":
         return (
           <button
+            onClick={() =>
+              navigate(`/message/${connection.user.id}`)
+            }
             className="
               flex items-center gap-2
               px-4 py-2
@@ -214,12 +217,10 @@ const Connections = () => {
 
   return (
     <div className="min-h-screen bg-[#EEEAF6] px-6 py-8">
-
       <div className="max-w-4xl mx-auto">
 
         {/* Header */}
         <div className="mb-6">
-
           <h1 className="text-3xl font-bold text-[#17383A]">
             Connections
           </h1>
@@ -227,15 +228,11 @@ const Connections = () => {
           <p className="mt-1 text-sm text-gray-500">
             Manage your connections and discover people.
           </p>
-
         </div>
-
 
         {/* Category Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-
           {categories.map((category) => {
-
             const Icon = category.icon;
             const isActive = activeCategory === category.id;
 
@@ -262,7 +259,6 @@ const Connections = () => {
                   }
                 `}
               >
-
                 {/* Icon */}
                 <div
                   className={`
@@ -290,19 +286,14 @@ const Connections = () => {
                 <p className="mt-1 text-sm font-medium text-[#587070]">
                   {category.title}
                 </p>
-
               </button>
             );
           })}
-
         </div>
-
 
         {/* Users Section */}
         <div className="mt-8">
-
           <div className="flex items-center justify-between mb-4">
-
             <div>
               <h2 className="text-lg font-semibold text-[#17383A]">
                 {activeCategoryData?.title}
@@ -312,15 +303,11 @@ const Connections = () => {
                 {filteredConnections.length} people
               </p>
             </div>
-
           </div>
-
 
           {/* User Cards */}
           <div className="space-y-3">
-
             {filteredConnections.map((connection) => (
-
               <div
                 key={connection.id}
                 className="
@@ -345,10 +332,10 @@ const Connections = () => {
 
                 {/* User */}
                 <div className="flex items-center gap-4 min-w-0 hover:cursor-pointer">
-
                   <img
-                  onClick={()=>navigate(`/Profile/${connection.user.id}`)}
-                   
+                    onClick={() =>
+                      navigate(`/Profile/${connection.user.id}`)
+                    }
                     src={connection.user.dp}
                     alt={connection.user.name}
                     className="
@@ -359,13 +346,15 @@ const Connections = () => {
                       transition-transform
                       duration-200
                       group-hover:scale-105
+                      cursor-pointer
                     "
                   />
 
                   <div className="min-w-0">
-
                     <h3
-                     onClick={()=>navigate(`/Profile/${connection.user.id}`)}
+                      onClick={() =>
+                        navigate(`/Profile/${connection.user.id}`)
+                      }
                       className="
                         text-sm
                         font-semibold
@@ -373,13 +362,17 @@ const Connections = () => {
                         truncate
                         group-hover:text-[#285557]
                         transition-colors
+                        cursor-pointer
                       "
                     >
                       {connection.user.name}
                     </h3>
 
-                    <p className="text-xs text-gray-400 truncate"
-                     onClick={()=>navigate(`/Profile/${connection.user.id}`)}
+                    <p
+                      className="text-xs text-gray-400 truncate cursor-pointer"
+                      onClick={() =>
+                        navigate(`/Profile/${connection.user.id}`)
+                      }
                     >
                       {connection.user.username}
                     </p>
@@ -387,27 +380,20 @@ const Connections = () => {
                     <p className="text-[11px] text-gray-400 mt-1">
                       {connection.mutualConnections} mutual connections
                     </p>
-
                   </div>
-
                 </div>
-
 
                 {/* Action */}
                 <div className="shrink-0">
-                  {renderAction()}
+                  {renderAction(connection)}
                 </div>
 
               </div>
-
             ))}
-
           </div>
-
 
           {/* Empty State */}
           {filteredConnections.length === 0 && (
-
             <div
               className="
                 py-12
@@ -431,15 +417,11 @@ const Connections = () => {
               <p className="text-xs text-gray-400 mt-1">
                 There are no people in this category yet.
               </p>
-
             </div>
-
           )}
 
         </div>
-
       </div>
-
     </div>
   );
 };
