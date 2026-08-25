@@ -74,6 +74,7 @@ const UserProfile = ({ user, posts, setshowedit, profileID }) => {
         </div>
 
         {/* Action */}
+        {!profileID &&
         <button
           onClick={() => setshowedit(true)}
           className="
@@ -98,6 +99,8 @@ const UserProfile = ({ user, posts, setshowedit, profileID }) => {
           <Edit size={16} />
           Edit Profile
         </button>
+        }
+        
 
       </div>
 
