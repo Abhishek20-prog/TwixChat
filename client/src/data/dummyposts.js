@@ -45,13 +45,15 @@ const videoUrls = [
 const dummyPosts = [];
 
 dummyUsers.forEach((user, userIndex) => {
-  // 5 posts for every user
+
+  // Create 5 posts for every user
   for (let i = 0; i < 5; i++) {
+
     const postNumber = i + 1;
 
+    // Decide post type
     let type;
 
-    // Different post types
     if (postNumber === 1) {
       type = "image";
     } else if (postNumber === 2) {
@@ -64,9 +66,15 @@ dummyUsers.forEach((user, userIndex) => {
       type = "text";
     }
 
+    const content =
+      postTexts[(userIndex + i) % postTexts.length];
+
     dummyPosts.push({
+
+      // Unique post ID
       id: `post-${user.id}-${postNumber}`,
 
+      // User who created the post
       user: {
         id: user.id,
         name: user.name,
@@ -74,31 +82,47 @@ dummyUsers.forEach((user, userIndex) => {
         dp: user.dp,
       },
 
+      // image / video / text
       type,
 
+      // Media
       media:
         type === "image"
-          ? `${imageUrls[(userIndex + i) % imageUrls.length]}?auto=format&fit=crop&w=800&q=80`
+          ? `${imageUrls[(userIndex + i) % imageUrls.length]}?auto=format&fit=crop&w=1000&q=80`
           : type === "video"
           ? videoUrls[userIndex % videoUrls.length]
           : null,
 
-      content:
-        type === "text"
-          ? postTexts[(userIndex + i) % postTexts.length]
-          : postTexts[(userIndex + i) % postTexts.length],
+      // Caption / text
+      content,
 
-      location: locations[(userIndex + i) % locations.length],
+      // Location
+      location:
+        locations[(userIndex + i) % locations.length],
 
+      // Engagement
       likes: Math.floor(Math.random() * 1500) + 20,
 
       comments: Math.floor(Math.random() * 200) + 1,
 
+      shares: Math.floor(Math.random() * 100),
+
+      // Only useful for videos
+      views:
+        type === "video"
+          ? Math.floor(Math.random() * 10000) + 100
+          : 0,
+
+      // Created time
       createdAt: new Date(
         Date.now() -
-          (userIndex * 2 + i + 1) * 60 * 60 * 1000
+          (userIndex * 2 + i + 1) *
+            60 *
+            60 *
+            1000
       ).toISOString(),
 
+      // Saved by current user
       saved: false,
     });
   }
