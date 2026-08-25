@@ -14,7 +14,7 @@ const Profile = () => {
 
   useEffect(() => {
     // For now, use the first user
-    const currentUser = dummyUsers[8];
+    const currentUser = dummyUsers[1];
 
     setUser(currentUser);
 
@@ -86,6 +86,7 @@ const Profile = () => {
     ))}
 
   </div>
+  
 </div>
 
       </div>
