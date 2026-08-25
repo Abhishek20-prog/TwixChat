@@ -56,9 +56,40 @@ const Profile = () => {
 />
           
         </div>
+        {/* Tabs */}
+<div className="mt-6">
+  <div className="bg-white rounded-xl shadow-sm p-1 flex max-w-md mx-auto border border-[#D8E9E6]">
+    
+    {["posts", "media", "likes"].map((tab) => (
+      <button
+        key={tab}
+        onClick={() => setActiveTab(tab)}
+        className={`
+          flex-1
+          px-4
+          py-2
+          text-sm
+          font-medium
+          rounded-lg
+          transition-all
+          duration-200
+          cursor-pointer
+          ${
+            activeTab === tab
+              ? "bg-[#17383A] text-white shadow-sm"
+              : "text-[#5F7775] hover:bg-[#E8F5F3] hover:text-[#17383A]"
+          }
+        `}
+      >
+        {tab.charAt(0).toUpperCase() + tab.slice(1)}
+      </button>
+    ))}
+
+  </div>
+</div>
 
       </div>
-      
+
     </div>
   );
 };
