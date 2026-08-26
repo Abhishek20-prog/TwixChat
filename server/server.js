@@ -1,16 +1,18 @@
 import cors from 'cors'
 import express from 'express'
 import 'dotenv/config'
+import connectMongoDB from './config/db.js';
 
 const app = express();
+await connectMongoDB()
 
 app.use(cors());
 app.use(express.json());
 
 app.get("/", (req, res) => {
-  res.json({
-    message: "TwixChat server is running 🚀"
-  });
+  res.send(
+     "TwixChat server is running 🚀"
+  );
 });
 
 const PORT = process.env.PORT || 5000;
