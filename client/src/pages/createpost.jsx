@@ -41,14 +41,7 @@ const CreatePost = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    const newPost = {
-      type: postType,
-      content,
-      location,
-      media: preview?.file || null,
-    };
-
-    console.log(newPost);
+   
   };
 
   return (

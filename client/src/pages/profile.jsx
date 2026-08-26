@@ -6,6 +6,7 @@ import dummyPosts from "../data/dummyposts";
 import Loading from "../components/loading";
 import UserProfile from "../components/userprofile";
 import ProfilePost from "../components/profilepost";
+import EditProfile from "../components/editprofile";
 
 const Profile = () => {
   const [user, setUser] = useState(null);
@@ -134,8 +135,16 @@ const Profile = () => {
         </div>
 
       </div>
+      {showEdit && (
+  <EditProfile
+    user={user}
+    setUser={setUser}
+    setShowEdit={setShowEdit}
+  />
+)}
 
     </div>
+    
   );
 };
 
