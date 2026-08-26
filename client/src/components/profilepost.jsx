@@ -90,7 +90,7 @@ const ProfilePost = ({ posts }) => {
                     text-[#17383A]
                   "
                 >
-                  
+
                 </span>
 
                 {/* Caption */}
@@ -231,13 +231,13 @@ const ProfilePost = ({ posts }) => {
             {/* =============================== */}
             {/* TEXT */}
             {/* =============================== */}
-{/* =============================== */}
-{/* TEXT POST */}
-{/* =============================== */}
+            {/* =============================== */}
+            {/* TEXT POST */}
+            {/* =============================== */}
 
-{post.type === "text" && (
-  <div
-    className="
+            {post.type === "text" && (
+              <div
+                className="
       relative
       min-h-[280px]
       p-7
@@ -251,12 +251,12 @@ const ProfilePost = ({ posts }) => {
       duration-300
       group-hover:bg-[#DDF0ED]
     "
-  >
+              >
 
-    {/* Decorative quote */}
+                {/* Decorative quote */}
 
-    <span
-      className="
+                <span
+                  className="
         absolute
         -top-8
         -left-2
@@ -269,12 +269,12 @@ const ProfilePost = ({ posts }) => {
         duration-500
         group-hover:scale-110
       "
-    >
-      “
-    </span>
+                >
+                  “
+                </span>
 
-    <span
-      className="
+                <span
+                  className="
         absolute
         -bottom-16
         -right-2
@@ -287,14 +287,14 @@ const ProfilePost = ({ posts }) => {
         duration-500
         group-hover:scale-110
       "
-    >
-      ”
-    </span>
+                >
+                  ”
+                </span>
 
-    {/* Text */}
+                {/* Text */}
 
-    <div
-      className="
+                <div
+                  className="
         relative
         z-10
         text-center
@@ -304,34 +304,34 @@ const ProfilePost = ({ posts }) => {
         group-hover:opacity-0
         group-hover:scale-95
       "
-    >
+                >
 
-      <p
-        className="
+                  <p
+                    className="
           text-lg
           md:text-xl
           leading-relaxed
           font-semibold
           text-[#17383A]
         "
-      >
-        {post.content}
-      </p>
+                  >
+                    {post.content}
+                  </p>
 
-      <div className="mt-5">
+                  <div className="mt-5">
 
-        <span className="text-[10px] text-[#5A928C]">
-          {moment(post.createdAt).fromNow()}
-        </span>
+                    <span className="text-[10px] text-[#5A928C]">
+                      {moment(post.createdAt).fromNow()}
+                    </span>
 
-      </div>
+                  </div>
 
-    </div>
+                </div>
 
-    {/* Hover actions */}
+                {/* Hover actions */}
 
-    <div
-      className="
+                <div
+                  className="
         absolute
         inset-0
         flex
@@ -345,10 +345,10 @@ const ProfilePost = ({ posts }) => {
         duration-300
         z-20
       "
-    >
+                >
 
-      <div
-        className="
+                  <div
+                    className="
           flex
           items-center
           gap-1
@@ -358,10 +358,10 @@ const ProfilePost = ({ posts }) => {
           shadow-xl
           backdrop-blur-md
         "
-      >
+                  >
 
-        <button
-          className="
+                    <button
+                      className="
             flex
             items-center
             gap-1
@@ -377,13 +377,13 @@ const ProfilePost = ({ posts }) => {
             transition-all
             hover:scale-105
           "
-        >
-          <Heart size={15} />
-          {post.likes}
-        </button>
+                    >
+                      <Heart size={15} />
+                      {post.likes}
+                    </button>
 
-        <button
-          className="
+                    <button
+                      className="
             flex
             items-center
             gap-1
@@ -398,13 +398,13 @@ const ProfilePost = ({ posts }) => {
             transition-all
             hover:scale-105
           "
-        >
-          <MessageCircle size={15} />
-          {post.comments}
-        </button>
+                    >
+                      <MessageCircle size={15} />
+                      {post.comments}
+                    </button>
 
-        <button
-          className="
+                    <button
+                      className="
             w-9
             h-9
             flex
@@ -417,16 +417,16 @@ const ProfilePost = ({ posts }) => {
             transition-all
             hover:scale-105
           "
-        >
-          <Share2 size={15} />
-        </button>
+                    >
+                      <Share2 size={15} />
+                    </button>
 
-      </div>
+                  </div>
 
-    </div>
+                </div>
 
-  </div>
-)}
+              </div>
+            )}
 
 
             {/* =============================== */}
@@ -499,10 +499,9 @@ const Actions = ({ post, dark = false }) => {
           rounded-2xl
           shadow-xl
           backdrop-blur-md
-          ${
-            dark
-              ? "bg-white/15"
-              : "bg-white/95"
+          ${dark
+            ? "bg-white/15"
+            : "bg-white/95"
           }
         `}
       >
@@ -520,10 +519,9 @@ const Actions = ({ post, dark = false }) => {
             cursor-pointer
             transition-all
             hover:scale-105
-            ${
-              dark
-                ? "text-white hover:bg-white/10"
-                : "text-[#17383A] hover:bg-red-50 hover:text-red-500"
+            ${dark
+              ? "text-white hover:bg-white/10"
+              : "text-[#17383A] hover:bg-red-50 hover:text-red-500"
             }
           `}
         >
@@ -544,10 +542,9 @@ const Actions = ({ post, dark = false }) => {
             cursor-pointer
             transition-all
             hover:scale-105
-            ${
-              dark
-                ? "text-white hover:bg-white/10"
-                : "text-[#17383A] hover:bg-[#E8F5F3]"
+            ${dark
+              ? "text-white hover:bg-white/10"
+              : "text-[#17383A] hover:bg-[#E8F5F3]"
             }
           `}
         >
@@ -566,10 +563,9 @@ const Actions = ({ post, dark = false }) => {
             cursor-pointer
             transition-all
             hover:scale-105
-            ${
-              dark
-                ? "text-white hover:bg-white/10 "
-                : "text-[#17383A] hover:bg-[#E8F5F3]"
+            ${dark
+              ? "text-white hover:bg-white/10 "
+              : "text-[#17383A] hover:bg-[#E8F5F3]"
             }
           `}
         >
