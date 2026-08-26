@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
 import dummyUsers from "../data/dummyUsers";
-import dummyPosts from "../data/dummyposts";
 import Loading from "../components/loading";
 import { useParams } from "react-router-dom";
 import UserProfile from "../components/userprofile";
+import userPosts from "../data/dummyposts";
 
 const Profile = () => {
   const{profileID}=useParams()
@@ -12,18 +12,14 @@ const Profile = () => {
   const [activeTab, setActiveTab] = useState("posts");
   const [showEdit, setShowEdit] = useState(false);
 
-  useEffect(() => {
-    // For now, use the first user
-    const currentUser = dummyUsers[1];
-
-    setUser(currentUser);
-
-    const userPosts = dummyPosts.filter(
-      (post) => post.user.id === currentUser.id
-    );
-
-    setPosts(userPosts);
-  }, []);
+ const fetchuser = async () => {
+  setUser(dummyUsers)
+  setPosts(userPosts)
+  
+ }
+ useEffect(()=>{
+fetchuser()
+ },[])
 
   if (!user) {
     return <Loading />;
@@ -86,6 +82,7 @@ const Profile = () => {
     ))}
 
   </div>
+ 
   
 </div>
 
