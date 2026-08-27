@@ -3,7 +3,7 @@ import express from 'express'
 import 'dotenv/config'
 import connectMongoDB from './config/db.js';
 import {inngest,functions} from './inngest/index.js'
-import { serve } from 'inngest/astro';
+import { serve } from 'inngest/express';
 const app = express();
 await connectMongoDB()
 
