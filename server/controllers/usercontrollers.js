@@ -37,6 +37,8 @@ export const updateUser= async (res,req) => {
         full_name,
         location
     }
+    const profile = req.files.profile && req.files.profile [0]
+    const cover = req.files.cover && req.files.cover [0]
     
 
     } catch (error) {
