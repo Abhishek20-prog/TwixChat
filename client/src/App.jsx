@@ -1,11 +1,9 @@
-import React from "react";
+import { useEffect } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
-import { useUser } from "@clerk/react";
+import { useUser, useAuth} from "@clerk/react";
 import { Toaster } from "react-hot-toast";
-
 import Login from "./pages/login";
 import Layout from "./pages/layout";
-
 import Feed from "./pages/feed";
 import Discover from "./pages/discover";
 import Createpost from "./pages/createpost";
@@ -16,6 +14,10 @@ import Connections from "./pages/connections";
 
 const App = () => {
   const { user, isLoaded } = useUser();
+  const { getToken } = useAuth();
+  useEffect(() => {
+    getToken().then((token) => console.log(token));
+  }, [user])
 
   if (!isLoaded) {
     return null;

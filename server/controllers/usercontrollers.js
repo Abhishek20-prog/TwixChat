@@ -40,7 +40,7 @@ export const updateUser = async (req, res) => {
     try {
         const { userID } = req.auth();
 
-        const {
+        let {
             username,
             bio,
             location,
@@ -76,7 +76,7 @@ export const updateUser = async (req, res) => {
         }
 
 
-        const updatedData = {
+        let updatedData = {
             username: newUsername,
             bio,
             full_name,
