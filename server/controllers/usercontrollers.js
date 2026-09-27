@@ -1,32 +1,108 @@
 import fs from "fs";
+import mongoose from "mongoose";
 import imagekit from "../config/imagekit.js";
 import User from "../models/user.js";
+import { getAuth, clerkClient } from "@clerk/express";
 
 
-// ================= GET CURRENT USER =================
+// ======================================================
+// HELPER: GET CURRENT MONGODB USER
+// ======================================================
+
+// ======================================================
+// GET CURRENT MONGODB USER
+// ======================================================
+
+const getCurrentUser = async (req) => {
+    const { isAuthenticated, userId } = getAuth(req);
+
+    console.log("Authenticated:", isAuthenticated);
+    console.log("Clerk User ID:", userId);
+
+    // Not logged in
+    if (!isAuthenticated || !userId) {
+        return {
+            authenticated: false,
+            clerkUserId: null,
+            user: null
+        };
+    }
+
+    // Find existing MongoDB user
+    let user = await User.findOne({
+        clerkId: userId
+    });
+
+    // If user doesn't exist in MongoDB,
+    // get the user from Clerk
+    if (!user) {
+        console.log("MongoDB user not found.");
+        console.log("Creating MongoDB user for:", userId);
+
+        const clerkUser = await clerkClient.users.getUser(userId);
+
+        const email =
+            clerkUser.emailAddresses?.[0]?.emailAddress || "";
+
+        const username =
+            clerkUser.username ||
+            email.split("@")[0] ||
+            `user_${userId.slice(-8)}`;
+
+        const fullName =
+            `${clerkUser.firstName || ""} ${clerkUser.lastName || ""}`.trim();
+
+        const profilePicture =
+            clerkUser.imageUrl || "";
+
+        // Create MongoDB user
+        user = await User.create({
+            clerkId: userId,
+            username,
+            email,
+            full_name: fullName,
+            profile_picture: profilePicture
+        });
+
+        console.log("MongoDB user created:", user._id);
+    }
+
+    return {
+        authenticated: true,
+        clerkUserId: userId,
+        user
+    };
+};
+
+
+// ======================================================
+// GET CURRENT USER
+// ======================================================
+
+// ======================================================
+// GET CURRENT USER
+// ======================================================
 
 export const getUser = async (req, res) => {
     try {
-        const { userID } = req.auth();
+        const { authenticated, user } = await getCurrentUser(req);
 
-        const user = await User.findById(userID);
-
-        if (!user) {
-            return res.json({
+        if (!authenticated) {
+            return res.status(401).json({
                 success: false,
-                message: "User not found"
+                message: "Unauthorized"
             });
         }
 
-        return res.json({
+        return res.status(200).json({
             success: true,
             user
         });
 
     } catch (error) {
-        console.error(error);
+        console.error("getUser error:", error);
 
-        return res.json({
+        return res.status(500).json({
             success: false,
             message: error.message
         });
@@ -34,41 +110,53 @@ export const getUser = async (req, res) => {
 };
 
 
-// ================= UPDATE USER =================
+// ======================================================
+// UPDATE USER
+// ======================================================
 
 export const updateUser = async (req, res) => {
     try {
-        const { userID } = req.auth();
+        const { authenticated, user } = await getCurrentUser(req);
 
-        let {
+        // Check Clerk authentication
+        if (!authenticated) {
+            return res.status(401).json({
+                success: false,
+                message: "Unauthorized"
+            });
+        }
+
+        // Check MongoDB user
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found in database"
+            });
+        }
+
+        const {
             username,
             bio,
             location,
             full_name
         } = req.body;
 
-        const currentUser = await User.findById(userID);
 
-        if (!currentUser) {
-            return res.json({
-                success: false,
-                message: "User not found"
-            });
-        }
+        // ==================================================
+        // USERNAME
+        // ==================================================
 
+        const newUsername = username || user.username;
 
-        // Check username only if user is trying to change it
-        let newUsername = username || currentUser.username;
-
-        if (newUsername !== currentUser.username) {
+        if (newUsername !== user.username) {
 
             const existingUser = await User.findOne({
                 username: newUsername,
-                _id: { $ne: userID }
+                _id: { $ne: user._id }
             });
 
             if (existingUser) {
-                return res.json({
+                return res.status(409).json({
                     success: false,
                     message: "Username already exists"
                 });
@@ -76,15 +164,25 @@ export const updateUser = async (req, res) => {
         }
 
 
-        let updatedData = {
+        // ==================================================
+        // UPDATE DATA
+        // ==================================================
+
+        const updatedData = {
             username: newUsername,
-            bio,
-            full_name,
-            location
+            bio: bio !== undefined ? bio : user.bio,
+            full_name: full_name !== undefined
+                ? full_name
+                : user.full_name,
+            location: location !== undefined
+                ? location
+                : user.location
         };
 
 
-        // ================= COVER IMAGE =================
+        // ==================================================
+        // COVER IMAGE
+        // ==================================================
 
         const cover = req.files?.cover?.[0];
 
@@ -110,7 +208,9 @@ export const updateUser = async (req, res) => {
         }
 
 
-        // ================= PROFILE IMAGE =================
+        // ==================================================
+        // PROFILE IMAGE
+        // ==================================================
 
         const profile = req.files?.profile?.[0];
 
@@ -136,11 +236,15 @@ export const updateUser = async (req, res) => {
         }
 
 
-        // ================= UPDATE DATABASE =================
+        // ==================================================
+        // UPDATE DATABASE
+        // ==================================================
 
-        const user = await User.findByIdAndUpdate(
-            userID,
-            { $set: updatedData },
+        const updatedUser = await User.findByIdAndUpdate(
+            user._id,
+            {
+                $set: updatedData
+            },
             {
                 new: true,
                 runValidators: true
@@ -148,17 +252,17 @@ export const updateUser = async (req, res) => {
         );
 
 
-        return res.json({
+        return res.status(200).json({
             success: true,
-            user,
+            user: updatedUser,
             message: "Profile updated successfully"
         });
 
     } catch (error) {
 
-        console.error(error);
+        console.error("updateUser error:", error);
 
-        return res.json({
+        return res.status(500).json({
             success: false,
             message: error.message
         });
@@ -166,35 +270,88 @@ export const updateUser = async (req, res) => {
 };
 
 
-// ================= DISCOVER USERS =================
+// ======================================================
+// DISCOVER USERS
+// ======================================================
 
 export const discoveruser = async (req, res) => {
+
     try {
 
-        const { userID } = req.auth();
+        const { authenticated, user } = await getCurrentUser(req);
+
+        // Check authentication
+        if (!authenticated) {
+            return res.status(401).json({
+                success: false,
+                message: "Unauthorized"
+            });
+        }
+
+        // Check current user
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found in database"
+            });
+        }
+
         const { input = "" } = req.body;
 
+
+        // Escape regex special characters
+        const escapedInput = input.replace(
+            /[.*+?^${}()|[\]\\]/g,
+            "\\$&"
+        );
+
+
         const users = await User.find({
-            _id: { $ne: userID },
+
+            // Don't show current user
+            _id: {
+                $ne: user._id
+            },
 
             $or: [
-                { username: new RegExp(input, "i") },
-                { email: new RegExp(input, "i") },
-                { full_name: new RegExp(input, "i") },
-                { location: new RegExp(input, "i") }
+                {
+                    username: new RegExp(
+                        escapedInput,
+                        "i"
+                    )
+                },
+                {
+                    email: new RegExp(
+                        escapedInput,
+                        "i"
+                    )
+                },
+                {
+                    full_name: new RegExp(
+                        escapedInput,
+                        "i"
+                    )
+                },
+                {
+                    location: new RegExp(
+                        escapedInput,
+                        "i"
+                    )
+                }
             ]
         });
 
-        return res.json({
+
+        return res.status(200).json({
             success: true,
             users
         });
 
     } catch (error) {
 
-        console.error(error);
+        console.error("discoveruser error:", error);
 
-        return res.json({
+        return res.status(500).json({
             success: false,
             message: error.message
         });
@@ -202,72 +359,120 @@ export const discoveruser = async (req, res) => {
 };
 
 
-// ================= FOLLOW USER =================
+// ======================================================
+// FOLLOW USER
+// ======================================================
 
 export const followuser = async (req, res) => {
+
     try {
 
-        const { userID } = req.auth();
+        const { authenticated, user } = await getCurrentUser(req);
+
+        // Check authentication
+        if (!authenticated) {
+            return res.status(401).json({
+                success: false,
+                message: "Unauthorized"
+            });
+        }
+
+        // Check current user
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found in database"
+            });
+        }
+
+
         const { id } = req.body;
 
-        if (userID === id) {
-            return res.json({
+
+        // Check target ID
+        if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid user ID"
+            });
+        }
+
+
+        // Cannot follow yourself
+        if (user._id.toString() === id.toString()) {
+            return res.status(400).json({
                 success: false,
                 message: "You cannot follow yourself"
             });
         }
 
 
+        // Find target user
         const targetUser = await User.findById(id);
 
         if (!targetUser) {
-            return res.json({
+            return res.status(404).json({
                 success: false,
                 message: "User not found"
             });
         }
 
 
-        // Atomic update prevents duplicate follows
-        const user = await User.findOneAndUpdate(
-            {
-                _id: userID,
-                following: { $ne: id }
-            },
-            {
-                $addToSet: { following: id }
-            },
-            {
-                new: true
-            }
+        // ==================================================
+        // CHECK IF ALREADY FOLLOWING
+        // ==================================================
+
+        const alreadyFollowing = user.following.some(
+            (followingId) =>
+                followingId.toString() === id.toString()
         );
 
-        if (!user) {
-            return res.json({
+        if (alreadyFollowing) {
+            return res.status(400).json({
                 success: false,
                 message: "User already followed"
             });
         }
 
 
+        // ==================================================
+        // ADD TO FOLLOWING
+        // ==================================================
+
         await User.findByIdAndUpdate(
-            id,
+            user._id,
             {
-                $addToSet: { followers: userID }
+                $addToSet: {
+                    following: targetUser._id
+                }
             }
         );
 
 
-        return res.json({
+        // ==================================================
+        // ADD TO FOLLOWERS
+        // ==================================================
+
+        await User.findByIdAndUpdate(
+            targetUser._id,
+            {
+                $addToSet: {
+                    followers: user._id
+                }
+            }
+        );
+
+
+        return res.status(200).json({
             success: true,
             message: "User followed successfully"
         });
 
     } catch (error) {
 
-        console.error(error);
+        console.error("followuser error:", error);
 
-        return res.json({
+        return res.status(500).json({
             success: false,
             message: error.message
         });
@@ -275,59 +480,120 @@ export const followuser = async (req, res) => {
 };
 
 
-// ================= UNFOLLOW USER =================
+// ======================================================
+// UNFOLLOW USER
+// ======================================================
 
 export const unfollowuser = async (req, res) => {
+
     try {
 
-        const { userID } = req.auth();
+        const { authenticated, user } = await getCurrentUser(req);
+
+        // Check authentication
+        if (!authenticated) {
+            return res.status(401).json({
+                success: false,
+                message: "Unauthorized"
+            });
+        }
+
+        // Check current user
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found in database"
+            });
+        }
+
+
         const { id } = req.body;
 
 
-        const user = await User.findOneAndUpdate(
-            {
-                _id: userID,
-                following: id
-            },
-            {
-                $pull: {
-                    following: id
-                }
-            },
-            {
-                new: true
-            }
+        // Validate target ID
+        if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid user ID"
+            });
+        }
+
+
+        // Cannot unfollow yourself
+        if (user._id.toString() === id.toString()) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid operation"
+            });
+        }
+
+
+        // Find target user
+        const targetUser = await User.findById(id);
+
+        if (!targetUser) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            });
+        }
+
+
+        // ==================================================
+        // CHECK IF FOLLOWING
+        // ==================================================
+
+        const isFollowing = user.following.some(
+            (followingId) =>
+                followingId.toString() === id.toString()
         );
 
-
-        if (!user) {
-            return res.json({
+        if (!isFollowing) {
+            return res.status(400).json({
                 success: false,
                 message: "User not followed"
             });
         }
 
 
+        // ==================================================
+        // REMOVE FROM FOLLOWING
+        // ==================================================
+
         await User.findByIdAndUpdate(
-            id,
+            user._id,
             {
                 $pull: {
-                    followers: userID
+                    following: targetUser._id
                 }
             }
         );
 
 
-        return res.json({
+        // ==================================================
+        // REMOVE FROM FOLLOWERS
+        // ==================================================
+
+        await User.findByIdAndUpdate(
+            targetUser._id,
+            {
+                $pull: {
+                    followers: user._id
+                }
+            }
+        );
+
+
+        return res.status(200).json({
             success: true,
             message: "User unfollowed successfully"
         });
 
     } catch (error) {
 
-        console.error(error);
+        console.error("unfollowuser error:", error);
 
-        return res.json({
+        return res.status(500).json({
             success: false,
             message: error.message
         });

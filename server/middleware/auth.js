@@ -3,16 +3,15 @@ export const protect = async (req, res, next) => {
         const { userId } = await req.auth();
 
         if (!userId) {
-            return res.json({
+            return res.status(401).json({
                 success: false,
-                message: "not authenticated"
+                message: "Not authenticated"
             });
         }
 
         next();
-
     } catch (error) {
-        res.json({
+        return res.status(401).json({
             success: false,
             message: error.message
         });
