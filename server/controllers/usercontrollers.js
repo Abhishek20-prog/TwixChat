@@ -187,26 +187,26 @@ export const updateUser = async (req, res) => {
 
         const cover = req.files?.cover?.[0];
 
-        if (cover) {
+      if (cover) {
+    const buffer = fs.readFileSync(cover.path);
 
-            const buffer = fs.readFileSync(cover.path);
+    const response = await imagekit.files.upload({
+        file: buffer,
+        fileName: cover.originalname
+    });
 
-            const response = await imagekit.upload({
-                file: buffer,
-                fileName: cover.originalname
-            });
+    const url = imagekit.helper.buildSrc({
+        urlEndpoint: process.env.IMAGEKIT_URL_ENDPOINT,
+        src: response.filePath,
+        transformation: [
+            { quality: "auto" },
+            { format: "webp" },
+            { width: 1280 }
+        ]
+    });
 
-            const url = imagekit.url({
-                path: response.filePath,
-                transformation: [
-                    { quality: "auto" },
-                    { format: "webp" },
-                    { width: "1280" }
-                ]
-            });
-
-            updatedData.cover_photo = url;
-        }
+    updatedData.cover_photo = url;
+}
 
 
         // ==================================================
@@ -219,17 +219,18 @@ export const updateUser = async (req, res) => {
 
             const buffer = fs.readFileSync(profile.path);
 
-            const response = await imagekit.upload({
+            const response = await imagekit.files.upload({
                 file: buffer,
                 fileName: profile.originalname
             });
 
-            const url = imagekit.url({
-                path: response.filePath,
+            const url = imagekit.helper.buildSrc({
+                urlEndpoint: process.env.IMAGEKIT_URL_ENDPOINT,
+                src: response.filePath,
                 transformation: [
                     { quality: "auto" },
                     { format: "webp" },
-                    { width: "512" }
+                    { width: 512 }
                 ]
             });
 
