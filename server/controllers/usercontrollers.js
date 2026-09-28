@@ -600,95 +600,248 @@ export const unfollowuser = async (req, res) => {
         });
     }
 };
+
+
+
+// ==========================================
+// SEND CONNECTION REQUEST
+// ==========================================
 export const sendConnectionRequest = async (req, res) => {
     try {
-        const {userId} = req.auth();
-        const {id} = req.body;
-        const connection  =await connectionModel.findOne({
+        const { authenticated, user } = await getCurrentUser(req);
+
+        if (!authenticated) {
+            return res.status(401).json({
+                success: false,
+                message: "Unauthorized"
+            });
+        }
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            });
+        }
+
+        const { id: toUserId } = req.body;
+
+        // Check target ID
+        if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid user ID"
+            });
+        }
+
+        // Prevent sending request to yourself
+        if (user._id.toString() === id.toString()) {
+            return res.status(400).json({
+                success: false,
+                message: "You cannot send a connection request to yourself"
+            });
+        }
+
+        // Check if target user exists
+        const targetUser = await User.findById(id);
+
+        if (!targetUser) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            });
+        }
+
+        // Check whether connection already exists
+        const existingConnection = await connectionModel.findOne({
             $or: [
-                { from_user_Id: userId, to_user_Id: id },
-                { from_user_Id: id, to_user_Id: userId }
+                {
+                    from_user_Id: user._id,
+                    to_user_Id: targetUser._id
+                },
+                {
+                    from_user_Id: targetUser._id,
+                    to_user_Id: user._id
+                }
             ]
         });
-            if (!connection) {
-                const newConnection = await connectionModel.create({
-                    from_user_Id: userId,
-                    to_user_Id: id,
-                    status: 'pending'
-                });
-                return res.status(201).json({
-                    success: true,
-                    message: "Connection request sent successfully",
-                    data: newConnection
-                });
-            } else {
-                return res.status(400).json({
-                    success: false,
-                    message: "Connection request already exists"
-                });
-            }
+
+        if (existingConnection) {
+            return res.status(400).json({
+                success: false,
+                message: `Connection already exists with status: ${existingConnection.status}`
+            });
+        }
+
+        // Create connection request
+        const newConnection = await connectionModel.create({
+            from_user_Id: user._id,
+            to_user_Id: targetUser._id,
+            status: "pending"
+        });
+
+        return res.status(201).json({
+            success: true,
+            message: "Connection request sent successfully",
+            data: newConnection
+        });
+
     } catch (error) {
         console.error("sendConnectionRequest error:", error);
+
         return res.status(500).json({
             success: false,
-            message: error.message
+            message: "Internal server error"
         });
     }
-}
-export const getuserConnections = async (req, res) => {
+};
+
+
+// ==========================================
+// GET USER CONNECTIONS
+// ==========================================
+export const getUserConnections = async (req, res) => {
     try {
-        const {userId} = req.auth();
-        const connections = await User.findById(userId).populate('connection','followers following');
-        const connection = User.connections;
-        const followers = connection.followers;
-        const following = connection.following;
-        const pendingConnections = await connectionModel.find({
-           to_user_Id: userId,
-           status: 'pending'
-           .populate('from_user_Id').map(connection => connection.from_user_Id)
-        });
+        const { authenticated, user } = await getCurrentUser(req);
+
+        if (!authenticated) {
+            return res.status(401).json({
+                success: false,
+                message: "Unauthorized"
+            });
+        }
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            });
+        }
+
+        // Get accepted connections
+        const connections = await User.findById(user._id)
+            .populate("connections");
+
+        // Get pending requests
+        const pendingConnections = await connectionModel
+            .find({
+                to_user_Id: user._id,
+                status: "pending"
+            })
+            .populate("from_user_Id");
+
+        // Extract users who sent requests
+        const pendingUsers = pendingConnections.map(
+            connection => connection.from_user_Id
+        );
+
         return res.status(200).json({
             success: true,
             data: {
-                connections,
-                followers,
-                following,
-                pendingConnections
+                connections: connections?.connections || [],
+                followers: user.followers || [],
+                following: user.following || [],
+                pendingConnections: pendingUsers
             }
         });
+
     } catch (error) {
-        console.error("getuserConnections error:", error);
+        console.error("getUserConnections error:", error);
+
         return res.status(500).json({
             success: false,
-            message: error.message
+            message: "Internal server error"
         });
     }
-}
+};
+
+
+// ==========================================
+// ACCEPT CONNECTION REQUEST
+// ==========================================
 export const acceptConnectionRequest = async (req, res) => {
     try {
-        const {userId} = req.auth();
-        const {id} = req.body;
+        const { authenticated, user } = await getCurrentUser(req);
+
+        if (!authenticated) {
+            return res.status(401).json({
+                success: false,
+                message: "Unauthorized"
+            });
+        }
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            });
+        }
+
+        const { id: fromUserId } = req.body;
+
+        // Validate ID
+        if (!fromUserId || !mongoose.Types.ObjectId.isValid(fromUserId)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid user ID"
+            });
+        }
+
+        // Find pending request
         const connection = await connectionModel.findOne({
-            from_user_Id: id,
-            to_user_Id: userId,
-            status: 'pending'
+            from_user_Id: fromUserId,
+            to_user_Id: user._id,
+            status: "pending"
         });
+
         if (!connection) {
             return res.status(404).json({
                 success: false,
                 message: "Connection request not found"
             });
         }
-        connection.status = 'accepted';
-        await connection.save();
+
+        // Find requesting user
+        const requestingUser = await User.findById(fromUserId);
+
+        if (!requestingUser) {
+            return res.status(404).json({
+                success: false,
+                message: "Requesting user not found"
+            });
+        }
+
+        // Add users to each other's connections
+        if (!user.connections.includes(requestingUser._id)) {
+            user.connections.push(requestingUser._id);
+        }
+
+        if (!requestingUser.connections.includes(user._id)) {
+            requestingUser.connections.push(user._id);
+        }
+
+        // Update request status
+        connection.status = "accepted";
+
+        // Save all changes
+        await Promise.all([
+            user.save(),
+            requestingUser.save(),
+            connection.save()
+        ]);
+
         return res.status(200).json({
             success: true,
             message: "Connection request accepted successfully"
         });
-    } 
-    catch (error) {
+
+    } catch (error) {
         console.error("acceptConnectionRequest error:", error);
-        return res.status(500).json({  
+
+        return res.status(500).json({
             success: false,
-            message: "An error occurred while accepting the connection request"
-        })}}
+            message: "Internal server error"
+        });
+    }
+};
+

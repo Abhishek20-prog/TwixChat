@@ -75,6 +75,8 @@ const syncUserdeletion = inngest.createFunction(
         await User.findByIdAndDelete(id);
     }
 );
+// inggest function for sending email when a user receives a connection request
+
 
 export const functions = [
     syncUsercreation,
