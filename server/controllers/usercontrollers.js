@@ -2,6 +2,7 @@ import fs from "fs";
 import mongoose from "mongoose";
 import imagekit from "../config/imagekit.js";
 import User from "../models/user.js";
+import connectionModel from "../models/connection.js";
 import { getAuth, clerkClient } from "@clerk/express";
 
 
@@ -599,3 +600,29 @@ export const unfollowuser = async (req, res) => {
         });
     }
 };
+export const sendConnectionRequest = async (req, res) => {
+    try {
+        const {userId} = req.auth();
+        const {id} = req.body;
+        const connection  =await connectionModel.findOne({
+            $or: [
+                { from_user_Id: userId, to_user_Id: id },
+                { from_user_Id: id, to_user_Id: userId }
+            ]
+        });
+            
+
+        return res.status(201).json({
+            success: true,
+            message: "Connection request sent successfully",
+            data: connection
+        });
+
+    } catch (error) {
+        console.error("sendConnectionRequest error:", error);
+        return res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+}
