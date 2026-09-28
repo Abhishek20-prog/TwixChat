@@ -610,14 +610,23 @@ export const sendConnectionRequest = async (req, res) => {
                 { from_user_Id: id, to_user_Id: userId }
             ]
         });
-            
-
-        return res.status(201).json({
-            success: true,
-            message: "Connection request sent successfully",
-            data: connection
-        });
-
+            if (!connection) {
+                const newConnection = await connectionModel.create({
+                    from_user_Id: userId,
+                    to_user_Id: id,
+                    status: 'pending'
+                });
+                return res.status(201).json({
+                    success: true,
+                    message: "Connection request sent successfully",
+                    data: newConnection
+                });
+            } else {
+                return res.status(400).json({
+                    success: false,
+                    message: "Connection request already exists"
+                });
+            }
     } catch (error) {
         console.error("sendConnectionRequest error:", error);
         return res.status(500).json({
@@ -626,3 +635,60 @@ export const sendConnectionRequest = async (req, res) => {
         });
     }
 }
+export const getuserConnections = async (req, res) => {
+    try {
+        const {userId} = req.auth();
+        const connections = await User.findById(userId).populate('connection','followers following');
+        const connection = User.connections;
+        const followers = connection.followers;
+        const following = connection.following;
+        const pendingConnections = await connectionModel.find({
+           to_user_Id: userId,
+           status: 'pending'
+           .populate('from_user_Id').map(connection => connection.from_user_Id)
+        });
+        return res.status(200).json({
+            success: true,
+            data: {
+                connections,
+                followers,
+                following,
+                pendingConnections
+            }
+        });
+    } catch (error) {
+        console.error("getuserConnections error:", error);
+        return res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+}
+export const acceptConnectionRequest = async (req, res) => {
+    try {
+        const {userId} = req.auth();
+        const {id} = req.body;
+        const connection = await connectionModel.findOne({
+            from_user_Id: id,
+            to_user_Id: userId,
+            status: 'pending'
+        });
+        if (!connection) {
+            return res.status(404).json({
+                success: false,
+                message: "Connection request not found"
+            });
+        }
+        connection.status = 'accepted';
+        await connection.save();
+        return res.status(200).json({
+            success: true,
+            message: "Connection request accepted successfully"
+        });
+    } 
+    catch (error) {
+        console.error("acceptConnectionRequest error:", error);
+        return res.status(500).json({  
+            success: false,
+            message: "An error occurred while accepting the connection request"
+        })}}
