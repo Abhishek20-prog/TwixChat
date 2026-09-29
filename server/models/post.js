@@ -1,37 +1,75 @@
-import mongoose from "mongoose";
+import fs from "fs";
+import { Post } from "../models/post.js";
+import imagekit from "../config/imagekit.js";
 
-const postSchema = new mongoose.Schema({
-    userId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-        required: true
-    },
-   content: {
-      type: String,
-      required: true
-   },
-   image_url: 
-     [{type: String}],
-      default: []
-      ,
-    post_type: {
-        type: String,
-        enum: ["text", "image", "image+text"],
-        required: true
-    },
-    likes: [{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User"
-    
+async function addPost(req, res) {
+    try {
+        const { content, post_type } = req.body;
+        const userId = req.user._id;
 
-}],
-    comments: [{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Comment"
-    }]
-},
-{
-    timestamps: true
+        // Uploaded files
+        const files = req.files || [];
+
+        // Upload images to ImageKit
+        const image_url = await Promise.all(
+            files.map(async (image) => {
+                try {
+                    const fileBuffer = fs.readFileSync(image.path);
+
+                    const response = await imagekit.files.upload({
+                        file: fileBuffer,
+                        fileName: image.originalname,
+                        folder: "posts",
+                    });
+
+                    const url = imagekit.helper.buildSrc({
+                        urlEndpoint: process.env.IMAGEKIT_URL_ENDPOINT,
+                        src: response.filePath,
+                        transformation: [
+                            {
+                                quality: "auto",
+                            },
+                            {
+                                format: "webp",
+                            },
+                            {
+                                width: 512,
+                            },
+                        ],
+                    });
+
+                    return url;
+                } finally {
+                    // Remove temporary Multer file
+                    if (image.path && fs.existsSync(image.path)) {
+                        fs.unlinkSync(image.path);
+                    }
+                }
+            })
+        );
+
+        // Create post
+        const post = await Post.create({
+            userId,
+            content,
+            image_url,
+            post_type,
+        });
+
+        return res.status(201).json({
+            success: true,
+            message: "Post created successfully",
+            post,
+        });
+
+    } catch (error) {
+        console.error("Add Post Error:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: error.message,
+        });
+    }
 }
-);
-export const Post = mongoose.model("Post", postSchema);
+
+export { addPost };
