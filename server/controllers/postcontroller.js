@@ -2,10 +2,10 @@
 async function addPost(req, res) {
     try {
         const { content, post_type } = req.body;
-        const userId = req.user._id;
-        let image_url = null;
+        const userId = req.user._id; 
+        let image_url = [];
         if (post_type === "image" || post_type === "image+text") {
-            image_url = req.file ? req.file.path : null;
+            image_url = req.file ? [req.file.path] : [];
         }
         const newPost = new Post({
             userId,
