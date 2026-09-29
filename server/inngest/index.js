@@ -1,5 +1,6 @@
 import { Inngest } from "inngest";
 import User from "../models/user.js";
+import connectionModel from "../models/connection.js";
 
 export const inngest = new Inngest({
     id: "TwixChat-app"
@@ -76,10 +77,32 @@ const syncUserdeletion = inngest.createFunction(
     }
 );
 // inggest function for sending email when a user receives a connection request
-
+const sendnewconnectionrequestemail = inngest.createFunction(
+    {
+        id: "send-new-connection-request-email",
+        triggers: { event: "app/connection-request" }
+    },
+    async ({ event }) => {
+        const {connnectionId } = event.data;
+        await step.run("send-email", async () => {
+            const connection = await connectionModel.findById(connnectionId).populate('from_user_Id').populate('to_user_Id');
+            const subject = "New Connection Request";
+            const emailBody = `
+                <p>Hello ${connection.to_user_Id.full_name},</p>
+                <p>You have a new connection request from ${connection.from_user_Id.full_name}.</p>
+                <p>Click <a href="${process.env.FRONTEND_URL}/connections">here</a> to view the request.</p>
+                <p>Best regards,<br/>TwixChat Team</p>
+            `;
+            await sendEmail(connection.to_user_Id.email, "New Connection Request", subject, emailBody);
+        }
+           
+        );
+    }
+);
 
 export const functions = [
     syncUsercreation,
     syncUserupdation,
-    syncUserdeletion
+    syncUserdeletion,
+    sendnewconnectionrequestemail
 ];
