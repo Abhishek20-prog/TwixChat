@@ -7,24 +7,21 @@ async function addPost(req, res) {
         const { content, post_type } = req.body;
         const userId = req.user._id;
 
-        // Get uploaded files safely
+        // Uploaded files
         const files = req.files || [];
 
         // Upload images to ImageKit
         const image_url = await Promise.all(
             files.map(async (image) => {
                 try {
-                    // Read temporary file
                     const fileBuffer = fs.readFileSync(image.path);
 
-                    // Upload to ImageKit
                     const response = await imagekit.files.upload({
                         file: fileBuffer,
                         fileName: image.originalname,
                         folder: "posts",
                     });
 
-                    // Generate optimized URL
                     const url = imagekit.helper.buildSrc({
                         urlEndpoint: process.env.IMAGEKIT_URL_ENDPOINT,
                         src: response.filePath,
@@ -43,7 +40,7 @@ async function addPost(req, res) {
 
                     return url;
                 } finally {
-                    // Delete temporary multer file
+                    // Remove temporary Multer file
                     if (image.path && fs.existsSync(image.path)) {
                         fs.unlinkSync(image.path);
                     }
@@ -51,12 +48,12 @@ async function addPost(req, res) {
             })
         );
 
-        // Create post in MongoDB
+        // Create post
         const post = await Post.create({
-            user: userId,
+            userId,
             content,
-            post_type,
             image_url,
+            post_type,
         });
 
         return res.status(201).json({
@@ -64,6 +61,7 @@ async function addPost(req, res) {
             message: "Post created successfully",
             post,
         });
+
     } catch (error) {
         console.error("Add Post Error:", error);
 
