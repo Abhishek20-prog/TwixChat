@@ -1,6 +1,7 @@
 import { Inngest } from "inngest";
 import User from "../models/user.js";
 import connectionModel from "../models/connection.js";
+import sendEmail from "../config/nodemailer.js";
 
 export const inngest = new Inngest({
     id: "TwixChat-app"
