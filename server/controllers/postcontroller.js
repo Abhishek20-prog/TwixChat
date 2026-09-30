@@ -1,14 +1,22 @@
-
 import fs from "fs/promises";
 import { Post } from "../models/post.js";
 import imagekit from "../config/imagekit.js";
-import { User } from "../models/user.js";
+import User from "../models/user.js";
 
 export const addPost = async (req, res) => {
     try {
-        const { content , post_type } = req.body;
-        const userId = req.user._id;
+        const { content = "", post_type } = req.body;
+        const { userId: clerkId } = req.auth();
         const files = req.files || [];
+
+        const user = await User.findOne({ clerkId });
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found",
+            });
+        }
 
         const image_url = await Promise.all(
             files.map(async (image) => {
@@ -44,7 +52,7 @@ export const addPost = async (req, res) => {
         );
 
         const post = await Post.create({
-            userId,
+            userId: user._id,
             content,
             image_url,
             post_type,
@@ -67,10 +75,10 @@ export const addPost = async (req, res) => {
 
 export const getFeedPosts = async (req, res) => {
     try {
-        const { userId } = req.auth();
+        const { userId: clerkId } = req.auth();
 
-        const user = await User.findById(userId)
-            .select("following followers connections")
+        const user = await User.findOne({ clerkId })
+            .select("following followers")
             .lean();
 
         if (!user) {
@@ -81,10 +89,9 @@ export const getFeedPosts = async (req, res) => {
         }
 
         const userIds = [
-            userId,
+            user._id,
             ...(user.following || []),
             ...(user.followers || []),
-            ...(user.connections || []),
         ];
 
         const uniqueUserIds = [
@@ -115,13 +122,22 @@ export const getFeedPosts = async (req, res) => {
 
 export const likePost = async (req, res) => {
     try {
-        const { userId } = req.auth();
+        const { userId: clerkId } = req.auth();
         const { postId } = req.body;
 
         if (!postId) {
             return res.status(400).json({
                 success: false,
                 message: "Post ID is required",
+            });
+        }
+
+        const user = await User.findOne({ clerkId });
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found",
             });
         }
 
@@ -135,12 +151,12 @@ export const likePost = async (req, res) => {
         }
 
         const alreadyLiked = post.likes.some(
-            id => id.toString() === userId.toString()
+            id => id.toString() === user._id.toString()
         );
 
         if (alreadyLiked) {
             post.likes = post.likes.filter(
-                id => id.toString() !== userId.toString()
+                id => id.toString() !== user._id.toString()
             );
 
             await post.save();
@@ -152,7 +168,7 @@ export const likePost = async (req, res) => {
             });
         }
 
-        post.likes.push(userId);
+        post.likes.push(user._id);
         await post.save();
 
         return res.status(200).json({
@@ -169,4 +185,3 @@ export const likePost = async (req, res) => {
         });
     }
 };
-
