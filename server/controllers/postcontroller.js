@@ -6,7 +6,7 @@ import { User } from "../models/user.js";
 
 export const addPost = async (req, res) => {
     try {
-        const { content = "", post_type } = req.body;
+        const { content , post_type } = req.body;
         const userId = req.user._id;
         const files = req.files || [];
 
