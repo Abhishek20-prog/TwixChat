@@ -4,6 +4,7 @@ import imagekit from "../config/imagekit.js";
 import User from "../models/user.js";
 import connectionModel from "../models/connection.js";
 import { getAuth, clerkClient } from "@clerk/express";
+import Post from "../models/post.js";
 
 
 // ======================================================
@@ -848,30 +849,8 @@ export const acceptConnectionRequest = async (req, res) => {
 //Get user profiles
 export const getUserProfiles = async (req, res) => {
     try {
-        const { authenticated, user } = await getCurrentUser(req);
+       
         const {profileId} = req.params;
-
-        if (!profileId || !mongoose.Types.ObjectId.isValid(profileId)) {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid profile ID"
-            });
-        }
-
-        if (!authenticated) {
-            return res.status(401).json({
-                success: false,
-                message: "Unauthorized"
-            });
-        }
-
-        if (!user) {
-            return res.status(404).json({
-                success: false,
-                message: "User not found"
-            });
-        }
-
         // Find the specific user profile
         const profile = await User.findById(profileId);
 
@@ -881,11 +860,15 @@ export const getUserProfiles = async (req, res) => {
                 message: "Profile not found"
             });
         }
-
+        const {posts}=Post.find({userId:profileId}).sort({createdAt:-1}).populate("userId","username profile_picture full_name");
         return res.status(200).json({
             success: true,
-            data: profile
+            profile,
+            posts
         });
+
+        
+       
 
     } catch (error) {
         console.error("getUserProfiles error:", error);
