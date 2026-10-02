@@ -21,7 +21,7 @@ const postSchema = new mongoose.Schema(
 
         post_type: {
             type: String,
-            enum: ["text", "image", "image+text"],
+            enum: ["text", "image", "image_text"],
             required: true,
         },
 

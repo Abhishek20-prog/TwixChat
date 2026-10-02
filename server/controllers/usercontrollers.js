@@ -845,4 +845,39 @@ export const acceptConnectionRequest = async (req, res) => {
         });
     }
 };
+//Get user profiles
+export const getUserProfiles = async (req, res) => {
+    try {
+        const { authenticated, user } = await getCurrentUser(req);
 
+        if (!authenticated) {
+            return res.status(401).json({
+                success: false,
+                message: "Unauthorized"
+            });
+        }
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            });
+        }
+
+        // Find all users (excluding the current user)
+        const profiles = await User.find({ _id: { $ne: user._id } });
+
+        return res.status(200).json({
+            success: true,
+            data: profiles
+        });
+
+    } catch (error) {
+        console.error("getUserProfiles error:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error"
+        });
+    }
+};

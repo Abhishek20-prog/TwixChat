@@ -8,6 +8,7 @@ export const addPost = async (req, res) => {
         const { content = "", post_type } = req.body;
         const { userId: clerkId } = req.auth();
         const files = req.files || [];
+        console.log("Files:", files);
 
         const user = await User.findOne({ clerkId });
 
@@ -23,11 +24,11 @@ export const addPost = async (req, res) => {
                 try {
                     const fileBuffer = await fs.readFile(image.path);
 
-                    const response = await imagekit.files.upload({
-                        file: fileBuffer,
-                        fileName: image.originalname,
-                        folder: "posts",
-                    });
+const response = await imagekit.files.upload({
+    file: fileBuffer.toString("base64"),
+    fileName: image.originalname,
+    folder: "posts",
+});
 
                     return imagekit.helper.buildSrc({
                         urlEndpoint: process.env.IMAGEKIT_URL_ENDPOINT,
