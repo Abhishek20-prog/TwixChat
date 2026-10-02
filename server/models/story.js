@@ -14,33 +14,31 @@ const storySchema = new mongoose.Schema(
             trim: true,
         },
 
-        image_url: {
+        media_url: {
             type: [String],
             default: [],
         },
 
         story_type: {
             type: String,
-            enum: ["text", "image", "image_text"],
+            enum: ["text", "image", "video", "image_text"],
             required: true,
         },
 
-        likes: [
+       views: [
             {
                 type: mongoose.Schema.Types.ObjectId,
                 ref: "User",
             },
         ],
-
-        comments: [
-            {
-                type: mongoose.Schema.Types.ObjectId,
-                ref: "Comment",
-            },
-        ],
+        background_color: {
+            type: String,
+           
+        },
     },
     {
         timestamps: true,
+        minimize: false,
     }
 );
 
