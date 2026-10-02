@@ -849,6 +849,14 @@ export const acceptConnectionRequest = async (req, res) => {
 export const getUserProfiles = async (req, res) => {
     try {
         const { authenticated, user } = await getCurrentUser(req);
+        const {profileId} = req.params;
+
+        if (!profileId || !mongoose.Types.ObjectId.isValid(profileId)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid profile ID"
+            });
+        }
 
         if (!authenticated) {
             return res.status(401).json({
@@ -864,12 +872,19 @@ export const getUserProfiles = async (req, res) => {
             });
         }
 
-        // Find all users (excluding the current user)
-        const profiles = await User.find({ _id: { $ne: user._id } });
+        // Find the specific user profile
+        const profile = await User.findById(profileId);
+
+        if (!profile) {
+            return res.status(404).json({
+                success: false,
+                message: "Profile not found"
+            });
+        }
 
         return res.status(200).json({
             success: true,
-            data: profiles
+            data: profile
         });
 
     } catch (error) {
@@ -881,3 +896,7 @@ export const getUserProfiles = async (req, res) => {
         });
     }
 };
+
+
+
+    
