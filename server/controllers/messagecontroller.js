@@ -9,15 +9,9 @@ import Message from "../models/messages.js";
 
 import ImageKit from "@imagekit/nodejs";
 
-
-// ======================================================
-// IMAGEKIT CONFIGURATION
-// ======================================================
-
 const imagekit = new ImageKit({
     privateKey: process.env.IMAGEKIT_PRIVATE_KEY,
 });
-
 
 // ======================================================
 // ACTIVE SSE CONNECTIONS
@@ -25,9 +19,8 @@ const imagekit = new ImageKit({
 
 const activeConnections = new Map();
 
-
 // ======================================================
-// HELPER: GET CURRENT MONGODB USER
+// GET CURRENT MONGODB USER
 // ======================================================
 
 const getCurrentUser = async (req) => {
@@ -38,15 +31,14 @@ const getCurrentUser = async (req) => {
     }
 
     const user = await User.findOne({
-        clerkId: userId
+        clerkId: userId,
     });
 
     return user;
 };
 
-
 // ======================================================
-// SSE MESSAGE STREAM
+// MESSAGE STREAM - SSE
 // ======================================================
 
 export const messageStream = async (req, res) => {
@@ -56,90 +48,51 @@ export const messageStream = async (req, res) => {
         if (!user) {
             return res.status(401).json({
                 success: false,
-                message: "Unauthorized"
+                message: "User not found",
             });
         }
 
-        // ==================================================
-        // SET SSE HEADERS
-        // ==================================================
-
-        res.setHeader(
-            "Content-Type",
-            "text/event-stream"
-        );
-
-        res.setHeader(
-            "Cache-Control",
-            "no-cache"
-        );
-
-        res.setHeader(
-            "Connection",
-            "keep-alive"
-        );
+        res.setHeader("Content-Type", "text/event-stream");
+        res.setHeader("Cache-Control", "no-cache");
+        res.setHeader("Connection", "keep-alive");
 
         res.flushHeaders();
 
-        const userId = user._id.toString();
-
-        // ==================================================
-        // STORE ACTIVE CONNECTION
-        // ==================================================
-
-        activeConnections.set(userId, res);
-
-        // ==================================================
-        // SEND CONNECTION EVENT
-        // ==================================================
+        activeConnections.set(user._id.toString(), res);
 
         res.write(
             `event: connected\n` +
             `data: ${JSON.stringify({
                 success: true,
-                message: "SSE connected"
+                message: "SSE connection established",
             })}\n\n`
         );
-
-        // ==================================================
-        // KEEP CONNECTION ALIVE
-        // ==================================================
 
         const heartbeat = setInterval(() => {
             res.write(": heartbeat\n\n");
         }, 30000);
 
-        // ==================================================
-        // HANDLE DISCONNECT
-        // ==================================================
-
         req.on("close", () => {
             clearInterval(heartbeat);
 
-            if (
-                activeConnections.get(userId) === res
-            ) {
-                activeConnections.delete(userId);
-            }
+            activeConnections.delete(user._id.toString());
+
+            console.log(
+                `SSE disconnected: ${user._id.toString()}`
+            );
         });
 
     } catch (error) {
-        console.error(
-            "messageStream error:",
-            error
-        );
+        console.error("Message stream error:", error);
 
         if (!res.headersSent) {
             return res.status(500).json({
                 success: false,
-                message: "Internal server error"
+                message: error.message,
             });
         }
-
-        res.end();
     }
 };
-
 
 // ======================================================
 // SEND MESSAGE
@@ -149,24 +102,20 @@ export const sendMessage = async (req, res) => {
     let uploadedFilePath = null;
 
     try {
-        const sender = await getCurrentUser(req);
+        const user = await getCurrentUser(req);
 
-        if (!sender) {
+        if (!user) {
             return res.status(401).json({
                 success: false,
-                message: "Unauthorized"
+                message: "User not found",
             });
         }
 
         const {
             receiverId,
             content = "",
-            messageType = "text"
+            messageType = "text",
         } = req.body;
-
-        // ==================================================
-        // VALIDATE RECEIVER ID
-        // ==================================================
 
         if (
             !receiverId ||
@@ -174,79 +123,45 @@ export const sendMessage = async (req, res) => {
         ) {
             return res.status(400).json({
                 success: false,
-                message: "Invalid receiver ID"
+                message: "Invalid receiver ID",
             });
         }
 
-        // ==================================================
-        // PREVENT SELF MESSAGE
-        // ==================================================
-
-        if (
-            sender._id.toString() ===
-            receiverId.toString()
-        ) {
+        if (user._id.toString() === receiverId.toString()) {
             return res.status(400).json({
                 success: false,
-                message: "You cannot message yourself"
+                message: "You cannot send a message to yourself",
             });
         }
 
-        // ==================================================
-        // FIND RECEIVER
-        // ==================================================
-
-        const receiver =
-            await User.findById(receiverId);
+        const receiver = await User.findById(receiverId);
 
         if (!receiver) {
             return res.status(404).json({
                 success: false,
-                message: "Receiver not found"
+                message: "Receiver not found",
             });
         }
-
-        // ==================================================
-        // VALIDATE MESSAGE TYPE
-        // ==================================================
 
         const allowedTypes = [
             "text",
             "image",
             "video",
-            "file"
+            "file",
         ];
 
         if (!allowedTypes.includes(messageType)) {
             return res.status(400).json({
                 success: false,
-                message: "Invalid message type"
+                message: "Invalid message type",
             });
         }
 
-        // ==================================================
-        // TEXT MESSAGE
-        // ==================================================
+        let messageContent = content;
 
-        if (messageType === "text") {
-
-            if (
-                !content ||
-                typeof content !== "string" ||
-                !content.trim()
-            ) {
-                return res.status(400).json({
-                    success: false,
-                    message: "Message content is required"
-                });
-            }
-        }
-
-        // ==================================================
-        // IMAGE / VIDEO / FILE MESSAGE
-        // ==================================================
-
-        let messageContent = content?.trim() || "";
+        // ======================================================
+        // HANDLE MEDIA MESSAGE
+        // ======================================================
 
         if (
             messageType === "image" ||
@@ -258,66 +173,88 @@ export const sendMessage = async (req, res) => {
             if (!file) {
                 return res.status(400).json({
                     success: false,
-                    message: `A ${messageType} file is required`
+                    message: `Please upload a ${messageType}`,
                 });
             }
 
             uploadedFilePath = file.path;
 
-            // ==================================================
-            // UPLOAD TO IMAGEKIT
-            // ==================================================
+            // ======================================================
+            // VALIDATE IMAGE TYPE
+            // ======================================================
+
+            if (
+                messageType === "image" &&
+                !file.mimetype.startsWith("image/")
+            ) {
+                await fs.unlink(file.path).catch(() => {});
+
+                return res.status(400).json({
+                    success: false,
+                    message: "Only image files are allowed",
+                });
+            }
+
+            // ======================================================
+            // VALIDATE VIDEO TYPE
+            // ======================================================
+
+            if (
+                messageType === "video" &&
+                !file.mimetype.startsWith("video/")
+            ) {
+                await fs.unlink(file.path).catch(() => {});
+
+                return res.status(400).json({
+                    success: false,
+                    message: "Only video files are allowed",
+                });
+            }
 
             const uploadResponse =
                 await imagekit.files.upload({
                     file: createReadStream(file.path),
                     fileName: file.originalname,
-                    folder: `messages/${messageType}s`
+                    folder: `messages/${messageType}s`,
                 });
 
             messageContent = uploadResponse.url;
 
-            // ==================================================
-            // DELETE TEMPORARY FILE
-            // ==================================================
-
-            await fs
-                .unlink(file.path)
-                .catch(() => {});
+            await fs.unlink(file.path).catch(() => {});
 
             uploadedFilePath = null;
         }
 
-        // ==================================================
+        // ======================================================
         // CREATE MESSAGE
-        // ==================================================
+        // ======================================================
 
-        const message =
-            await Message.create({
-                senderId: sender._id,
-                receiverId: receiver._id,
-                content: messageContent,
-                messageType
-            });
+        const message = await Message.create({
+            senderId: user._id,
+            receiverId: receiver._id,
+            content: messageContent,
+            messageType,
+        });
 
-        // ==================================================
+        // ======================================================
         // POPULATE MESSAGE
-        // ==================================================
+        // ======================================================
 
-        const populatedMessage =
-            await Message.findById(message._id)
-                .populate(
-                    "senderId",
-                    "username full_name profile_picture"
-                )
-                .populate(
-                    "receiverId",
-                    "username full_name profile_picture"
-                );
+        const populatedMessage = await Message.findById(
+            message._id
+        )
+            .populate(
+                "senderId",
+                "username full_name profile_picture"
+            )
+            .populate(
+                "receiverId",
+                "username full_name profile_picture"
+            );
 
-        // ==================================================
-        // SEND REAL-TIME MESSAGE THROUGH SSE
-        // ==================================================
+        // ======================================================
+        // SEND MESSAGE THROUGH SSE
+        // ======================================================
 
         const receiverConnection =
             activeConnections.get(
@@ -333,175 +270,281 @@ export const sendMessage = async (req, res) => {
             );
         }
 
-        // ==================================================
-        // RESPONSE
-        // ==================================================
-
         return res.status(201).json({
             success: true,
-            message: "Message sent successfully",
-            data: populatedMessage,
-            deliveredRealtime:
-                !!receiverConnection
+            message: populatedMessage,
+            deliveredRealtime: !!receiverConnection,
         });
 
     } catch (error) {
-        console.error(
-            "sendMessage error:",
-            error
-        );
-
-        // ==================================================
-        // CLEANUP TEMP FILE IF ERROR OCCURS
-        // ==================================================
+        console.error("Send message error:", error);
 
         if (uploadedFilePath) {
-            await fs
-                .unlink(uploadedFilePath)
-                .catch(() => {});
+            await fs.unlink(uploadedFilePath).catch(() => {});
         }
 
         return res.status(500).json({
             success: false,
-            message: "Internal server error"
+            message: error.message,
         });
     }
 };
 
+// ======================================================
+// GET RECENT CHATS
+// ======================================================
+
+export const getRecentChats = async (req, res) => {
+    try {
+        const user = await getCurrentUser(req);
+
+        if (!user) {
+            return res.status(401).json({
+                success: false,
+                message: "User not found",
+            });
+        }
+
+        const currentUserId = user._id;
+
+        // ======================================================
+        // GET LATEST MESSAGE OF EACH CONVERSATION
+        // ======================================================
+
+        const recentChats = await Message.aggregate([
+            {
+                $match: {
+                    $or: [
+                        {
+                            senderId: currentUserId,
+                        },
+                        {
+                            receiverId: currentUserId,
+                        },
+                    ],
+                },
+            },
+
+            // ======================================================
+            // FIND THE OTHER USER
+            // ======================================================
+
+            {
+                $addFields: {
+                    otherUserId: {
+                        $cond: [
+                            {
+                                $eq: [
+                                    "$senderId",
+                                    currentUserId,
+                                ],
+                            },
+                            "$receiverId",
+                            "$senderId",
+                        ],
+                    },
+                },
+            },
+
+            // ======================================================
+            // SORT NEWEST MESSAGE FIRST
+            // ======================================================
+
+            {
+                $sort: {
+                    createdAt: -1,
+                },
+            },
+
+            // ======================================================
+            // KEEP ONLY ONE MESSAGE PER USER
+            // ======================================================
+
+            {
+                $group: {
+                    _id: "$otherUserId",
+                    lastMessage: {
+                        $first: "$$ROOT",
+                    },
+                },
+            },
+
+            // ======================================================
+            // SORT CONVERSATIONS BY LAST MESSAGE
+            // ======================================================
+
+            {
+                $sort: {
+                    "lastMessage.createdAt": -1,
+                },
+            },
+        ]);
+
+        // ======================================================
+        // GET USER DETAILS + UNREAD COUNT
+        // ======================================================
+
+        const formattedChats = await Promise.all(
+            recentChats.map(async (chat) => {
+                const otherUser = await User.findById(
+                    chat._id
+                ).select(
+                    "_id clerkId username email full_name profile_picture"
+                );
+
+                if (!otherUser) {
+                    return null;
+                }
+
+                const unreadCount =
+                    await Message.countDocuments({
+                        senderId: chat._id,
+                        receiverId: currentUserId,
+                        read: false,
+                    });
+
+                return {
+                    user: otherUser,
+
+                    lastMessage: {
+                        _id: chat.lastMessage._id,
+                        content:
+                            chat.lastMessage.content,
+                        messageType:
+                            chat.lastMessage.messageType,
+                        senderId:
+                            chat.lastMessage.senderId,
+                        receiverId:
+                            chat.lastMessage.receiverId,
+                        read: chat.lastMessage.read,
+                        createdAt:
+                            chat.lastMessage.createdAt,
+                    },
+
+                    unreadCount,
+                };
+            })
+        );
+
+        return res.status(200).json({
+            success: true,
+            recentChats: formattedChats.filter(
+                Boolean
+            ),
+        });
+
+    } catch (error) {
+        console.error("Get recent chats error:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: error.message,
+        });
+    }
+};
 
 // ======================================================
 // GET RECEIVED MESSAGES
 // ======================================================
 
-export const getReceivedMessages = async (
-    req,
-    res
-) => {
+export const getReceivedMessages = async (req, res) => {
     try {
         const user = await getCurrentUser(req);
 
         if (!user) {
             return res.status(401).json({
                 success: false,
-                message: "Unauthorized"
+                message: "User not found",
             });
         }
 
-        const messages =
-            await Message.find({
-                receiverId: user._id,
-                deletedByReceiver: false
-            })
-                .populate(
-                    "senderId",
-                    "username full_name profile_picture"
-                )
-                .populate(
-                    "receiverId",
-                    "username full_name profile_picture"
-                )
-                .sort({
-                    createdAt: -1
-                });
+        const messages = await Message.find({
+            receiverId: user._id,
+            deletedByReceiver: false,
+        })
+            .populate(
+                "senderId",
+                "username full_name profile_picture"
+            )
+            .sort({ createdAt: -1 });
 
         return res.status(200).json({
             success: true,
-            count: messages.length,
-            data: messages
+            messages,
         });
 
     } catch (error) {
         console.error(
-            "getReceivedMessages error:",
+            "Get received messages error:",
             error
         );
 
         return res.status(500).json({
             success: false,
-            message: "Internal server error"
+            message: error.message,
         });
     }
 };
-
 
 // ======================================================
 // GET SENT MESSAGES
 // ======================================================
 
-export const getSentMessages = async (
-    req,
-    res
-) => {
+export const getSentMessages = async (req, res) => {
     try {
         const user = await getCurrentUser(req);
 
         if (!user) {
             return res.status(401).json({
                 success: false,
-                message: "Unauthorized"
+                message: "User not found",
             });
         }
 
-        const messages =
-            await Message.find({
-                senderId: user._id,
-                deletedBySender: false
-            })
-                .populate(
-                    "senderId",
-                    "username full_name profile_picture"
-                )
-                .populate(
-                    "receiverId",
-                    "username full_name profile_picture"
-                )
-                .sort({
-                    createdAt: -1
-                });
+        const messages = await Message.find({
+            senderId: user._id,
+            deletedBySender: false,
+        })
+            .populate(
+                "receiverId",
+                "username full_name profile_picture"
+            )
+            .sort({ createdAt: -1 });
 
         return res.status(200).json({
             success: true,
-            count: messages.length,
-            data: messages
+            messages,
         });
 
     } catch (error) {
         console.error(
-            "getSentMessages error:",
+            "Get sent messages error:",
             error
         );
 
         return res.status(500).json({
             success: false,
-            message: "Internal server error"
+            message: error.message,
         });
     }
 };
-
 
 // ======================================================
 // GET CONVERSATION
 // ======================================================
 
-export const getConversation = async (
-    req,
-    res
-) => {
+export const getConversation = async (req, res) => {
     try {
         const user = await getCurrentUser(req);
 
         if (!user) {
             return res.status(401).json({
                 success: false,
-                message: "Unauthorized"
+                message: "User not found",
             });
         }
 
         const { userId } = req.params;
-
-        // ==================================================
-        // VALIDATE USER ID
-        // ==================================================
 
         if (
             !userId ||
@@ -509,98 +552,78 @@ export const getConversation = async (
         ) {
             return res.status(400).json({
                 success: false,
-                message: "Invalid user ID"
+                message: "Invalid user ID",
             });
         }
 
-        // ==================================================
-        // FIND OTHER USER
-        // ==================================================
-
-        const otherUser =
-            await User.findById(userId);
+        const otherUser = await User.findById(userId);
 
         if (!otherUser) {
             return res.status(404).json({
                 success: false,
-                message: "User not found"
+                message: "User not found",
             });
         }
 
-        // ==================================================
-        // GET CONVERSATION
-        // ==================================================
-
-        const messages =
-            await Message.find({
-                $or: [
-                    {
-                        senderId: user._id,
-                        receiverId: otherUser._id,
-                        deletedBySender: false
-                    },
-                    {
-                        senderId: otherUser._id,
-                        receiverId: user._id,
-                        deletedByReceiver: false
-                    }
-                ]
-            })
-                .populate(
-                    "senderId",
-                    "username full_name profile_picture"
-                )
-                .populate(
-                    "receiverId",
-                    "username full_name profile_picture"
-                )
-                .sort({
-                    createdAt: 1
-                });
+        const messages = await Message.find({
+            $or: [
+                {
+                    senderId: user._id,
+                    receiverId: otherUser._id,
+                    deletedBySender: false,
+                },
+                {
+                    senderId: otherUser._id,
+                    receiverId: user._id,
+                    deletedByReceiver: false,
+                },
+            ],
+        })
+            .populate(
+                "senderId",
+                "username full_name profile_picture"
+            )
+            .populate(
+                "receiverId",
+                "username full_name profile_picture"
+            )
+            .sort({ createdAt: 1 });
 
         return res.status(200).json({
             success: true,
-            count: messages.length,
-            data: messages
+            user: otherUser,
+            messages,
         });
 
     } catch (error) {
         console.error(
-            "getConversation error:",
+            "Get conversation error:",
             error
         );
 
         return res.status(500).json({
             success: false,
-            message: "Internal server error"
+            message: error.message,
         });
     }
 };
-
 
 // ======================================================
 // DELETE MESSAGE FOR SENDER
 // ======================================================
 
-export const deleteMessageForSender = async (
-    req,
-    res
-) => {
+export const deleteMessageForSender = async (req, res) => {
     try {
         const user = await getCurrentUser(req);
 
         if (!user) {
             return res.status(401).json({
                 success: false,
-                message: "Unauthorized"
+                message: "User not found",
             });
         }
 
         const { messageId } = req.params;
-
-        // ==================================================
-        // VALIDATE MESSAGE ID
-        // ==================================================
 
         if (
             !messageId ||
@@ -608,264 +631,166 @@ export const deleteMessageForSender = async (
         ) {
             return res.status(400).json({
                 success: false,
-                message: "Invalid message ID"
+                message: "Invalid message ID",
             });
         }
 
-        // ==================================================
-        // FIND MESSAGE
-        // ==================================================
-
-        const message =
-            await Message.findById(messageId);
+        const message = await Message.findOne({
+            _id: messageId,
+            senderId: user._id,
+        });
 
         if (!message) {
             return res.status(404).json({
                 success: false,
-                message: "Message not found"
+                message: "Message not found",
             });
         }
-
-        // ==================================================
-        // CHECK SENDER
-        // ==================================================
-
-        if (
-            message.senderId.toString() !==
-            user._id.toString()
-        ) {
-            return res.status(403).json({
-                success: false,
-                message:
-                    "You can only delete your own sent messages"
-            });
-        }
-
-        // ==================================================
-        // MARK DELETED FOR SENDER
-        // ==================================================
 
         message.deletedBySender = true;
-
-        // ==================================================
-        // DELETE COMPLETELY IF BOTH DELETED
-        // ==================================================
-
-        if (message.deletedByReceiver) {
-            await Message.findByIdAndDelete(
-                messageId
-            );
-        } else {
-            await message.save();
-        }
-
-        return res.status(200).json({
-            success: true,
-            message:
-                "Message deleted for sender"
-        });
-
-    } catch (error) {
-        console.error(
-            "deleteMessageForSender error:",
-            error
-        );
-
-        return res.status(500).json({
-            success: false,
-            message: "Internal server error"
-        });
-    }
-};
-
-
-// ======================================================
-// DELETE MESSAGE FOR RECEIVER
-// ======================================================
-
-export const deleteMessageForReceiver = async (
-    req,
-    res
-) => {
-    try {
-        const user = await getCurrentUser(req);
-
-        if (!user) {
-            return res.status(401).json({
-                success: false,
-                message: "Unauthorized"
-            });
-        }
-
-        const { messageId } = req.params;
-
-        // ==================================================
-        // VALIDATE MESSAGE ID
-        // ==================================================
-
-        if (
-            !messageId ||
-            !mongoose.Types.ObjectId.isValid(messageId)
-        ) {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid message ID"
-            });
-        }
-
-        // ==================================================
-        // FIND MESSAGE
-        // ==================================================
-
-        const message =
-            await Message.findById(messageId);
-
-        if (!message) {
-            return res.status(404).json({
-                success: false,
-                message: "Message not found"
-            });
-        }
-
-        // ==================================================
-        // CHECK RECEIVER
-        // ==================================================
-
-        if (
-            message.receiverId.toString() !==
-            user._id.toString()
-        ) {
-            return res.status(403).json({
-                success: false,
-                message:
-                    "You can only delete messages received by you"
-            });
-        }
-
-        // ==================================================
-        // MARK DELETED FOR RECEIVER
-        // ==================================================
-
-        message.deletedByReceiver = true;
-
-        // ==================================================
-        // DELETE COMPLETELY IF BOTH DELETED
-        // ==================================================
-
-        if (message.deletedBySender) {
-            await Message.findByIdAndDelete(
-                messageId
-            );
-        } else {
-            await message.save();
-        }
-
-        return res.status(200).json({
-            success: true,
-            message:
-                "Message deleted for receiver"
-        });
-
-    } catch (error) {
-        console.error(
-            "deleteMessageForReceiver error:",
-            error
-        );
-
-        return res.status(500).json({
-            success: false,
-            message: "Internal server error"
-        });
-    }
-};
-
-
-// ======================================================
-// MARK MESSAGE AS READ
-// ======================================================
-
-export const markMessageAsRead = async (
-    req,
-    res
-) => {
-    try {
-        const user = await getCurrentUser(req);
-
-        if (!user) {
-            return res.status(401).json({
-                success: false,
-                message: "Unauthorized"
-            });
-        }
-
-        const { messageId } = req.params;
-
-        // ==================================================
-        // VALIDATE MESSAGE ID
-        // ==================================================
-
-        if (
-            !messageId ||
-            !mongoose.Types.ObjectId.isValid(messageId)
-        ) {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid message ID"
-            });
-        }
-
-        // ==================================================
-        // FIND MESSAGE
-        // ==================================================
-
-        const message =
-            await Message.findById(messageId);
-
-        if (!message) {
-            return res.status(404).json({
-                success: false,
-                message: "Message not found"
-            });
-        }
-
-        // ==================================================
-        // CHECK RECEIVER
-        // ==================================================
-
-        if (
-            message.receiverId.toString() !==
-            user._id.toString()
-        ) {
-            return res.status(403).json({
-                success: false,
-                message:
-                    "Only the receiver can mark the message as read"
-            });
-        }
-
-        // ==================================================
-        // UPDATE READ STATUS
-        // ==================================================
-
-        message.read = true;
 
         await message.save();
 
         return res.status(200).json({
             success: true,
-            message: "Message marked as read",
-            data: message
+            message: "Message deleted for you",
         });
 
     } catch (error) {
         console.error(
-            "markMessageAsRead error:",
+            "Delete message for sender error:",
             error
         );
 
         return res.status(500).json({
             success: false,
-            message: "Internal server error"
+            message: error.message,
+        });
+    }
+};
+
+// ======================================================
+// DELETE MESSAGE FOR RECEIVER
+// ======================================================
+
+export const deleteMessageForReceiver = async (req, res) => {
+    try {
+        const user = await getCurrentUser(req);
+
+        if (!user) {
+            return res.status(401).json({
+                success: false,
+                message: "User not found",
+            });
+        }
+
+        const { messageId } = req.params;
+
+        if (
+            !messageId ||
+            !mongoose.Types.ObjectId.isValid(messageId)
+        ) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid message ID",
+            });
+        }
+
+        const message = await Message.findOne({
+            _id: messageId,
+            receiverId: user._id,
+        });
+
+        if (!message) {
+            return res.status(404).json({
+                success: false,
+                message: "Message not found",
+            });
+        }
+
+        message.deletedByReceiver = true;
+
+        await message.save();
+
+        return res.status(200).json({
+            success: true,
+            message: "Message deleted for you",
+        });
+
+    } catch (error) {
+        console.error(
+            "Delete message for receiver error:",
+            error
+        );
+
+        return res.status(500).json({
+            success: false,
+            message: error.message,
+        });
+    }
+};
+
+// ======================================================
+// MARK MESSAGE AS READ
+// ======================================================
+
+export const markMessageAsRead = async (req, res) => {
+    try {
+        const user = await getCurrentUser(req);
+
+        if (!user) {
+            return res.status(401).json({
+                success: false,
+                message: "User not found",
+            });
+        }
+
+        const { messageId } = req.params;
+
+        if (
+            !messageId ||
+            !mongoose.Types.ObjectId.isValid(messageId)
+        ) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid message ID",
+            });
+        }
+
+        const message = await Message.findOneAndUpdate(
+            {
+                _id: messageId,
+                receiverId: user._id,
+            },
+            {
+                read: true,
+            },
+            {
+                new: true,
+            }
+        );
+
+        if (!message) {
+            return res.status(404).json({
+                success: false,
+                message: "Message not found",
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message,
+        });
+
+    } catch (error) {
+        console.error(
+            "Mark message as read error:",
+            error
+        );
+
+        return res.status(500).json({
+            success: false,
+            message: error.message,
         });
     }
 };
