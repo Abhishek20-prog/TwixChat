@@ -243,7 +243,7 @@ const deleteStoryAfter24Hours = inngest.createFunction(
     {
         id: "delete-story-after-24-hours",
         triggers: {
-            event: "app/story-created"
+            event: "app/story-deleted"
         }
     },
 
