@@ -4,7 +4,7 @@ import imagekit from "../config/imagekit.js";
 import User from "../models/user.js";
 import connectionModel from "../models/connection.js";
 import { getAuth, clerkClient } from "@clerk/express";
-import Post from "../models/post.js";
+import {Post} from "../models/post.js";
 
 
 // ======================================================

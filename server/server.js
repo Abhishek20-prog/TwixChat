@@ -66,6 +66,7 @@ app.use(
 
 app.use("/api/user", userRouter);
 app.use("/api/post", (await import("./routes/postroutes.js")).default);
+app.use("/api/story", (await import("./routes/storiesroutes.js")).default);
 
 /* ----------------------------------
    404 Handler
