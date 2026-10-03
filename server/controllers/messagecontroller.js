@@ -1,7 +1,22 @@
 import mongoose from "mongoose";
+import fs from "fs/promises";
+import { createReadStream } from "fs";
+
 import { getAuth } from "@clerk/express";
+
 import User from "../models/user.js";
 import Message from "../models/messages.js";
+
+import ImageKit from "@imagekit/nodejs";
+
+
+// ======================================================
+// IMAGEKIT CONFIGURATION
+// ======================================================
+
+const imagekit = new ImageKit({
+    privateKey: process.env.IMAGEKIT_PRIVATE_KEY,
+});
 
 
 // ======================================================
@@ -131,6 +146,8 @@ export const messageStream = async (req, res) => {
 // ======================================================
 
 export const sendMessage = async (req, res) => {
+    let uploadedFilePath = null;
+
     try {
         const sender = await getCurrentUser(req);
 
@@ -143,7 +160,7 @@ export const sendMessage = async (req, res) => {
 
         const {
             receiverId,
-            content,
+            content = "",
             messageType = "text"
         } = req.body;
 
@@ -158,21 +175,6 @@ export const sendMessage = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 message: "Invalid receiver ID"
-            });
-        }
-
-        // ==================================================
-        // VALIDATE CONTENT
-        // ==================================================
-
-        if (
-            !content ||
-            typeof content !== "string" ||
-            !content.trim()
-        ) {
-            return res.status(400).json({
-                success: false,
-                message: "Message content is required"
             });
         }
 
@@ -194,9 +196,8 @@ export const sendMessage = async (req, res) => {
         // FIND RECEIVER
         // ==================================================
 
-        const receiver = await User.findById(
-            receiverId
-        );
+        const receiver =
+            await User.findById(receiverId);
 
         if (!receiver) {
             return res.status(404).json({
@@ -224,15 +225,80 @@ export const sendMessage = async (req, res) => {
         }
 
         // ==================================================
+        // TEXT MESSAGE
+        // ==================================================
+
+        if (messageType === "text") {
+
+            if (
+                !content ||
+                typeof content !== "string" ||
+                !content.trim()
+            ) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Message content is required"
+                });
+            }
+        }
+
+        // ==================================================
+        // IMAGE / VIDEO / FILE MESSAGE
+        // ==================================================
+
+        let messageContent = content?.trim() || "";
+
+        if (
+            messageType === "image" ||
+            messageType === "video" ||
+            messageType === "file"
+        ) {
+            const file = req.file;
+
+            if (!file) {
+                return res.status(400).json({
+                    success: false,
+                    message: `A ${messageType} file is required`
+                });
+            }
+
+            uploadedFilePath = file.path;
+
+            // ==================================================
+            // UPLOAD TO IMAGEKIT
+            // ==================================================
+
+            const uploadResponse =
+                await imagekit.files.upload({
+                    file: createReadStream(file.path),
+                    fileName: file.originalname,
+                    folder: `messages/${messageType}s`
+                });
+
+            messageContent = uploadResponse.url;
+
+            // ==================================================
+            // DELETE TEMPORARY FILE
+            // ==================================================
+
+            await fs
+                .unlink(file.path)
+                .catch(() => {});
+
+            uploadedFilePath = null;
+        }
+
+        // ==================================================
         // CREATE MESSAGE
         // ==================================================
 
-        const message = await Message.create({
-            senderId: sender._id,
-            receiverId: receiver._id,
-            content: content.trim(),
-            messageType
-        });
+        const message =
+            await Message.create({
+                senderId: sender._id,
+                receiverId: receiver._id,
+                content: messageContent,
+                messageType
+            });
 
         // ==================================================
         // POPULATE MESSAGE
@@ -250,17 +316,13 @@ export const sendMessage = async (req, res) => {
                 );
 
         // ==================================================
-        // CHECK RECEIVER SSE CONNECTION
+        // SEND REAL-TIME MESSAGE THROUGH SSE
         // ==================================================
 
         const receiverConnection =
             activeConnections.get(
                 receiver._id.toString()
             );
-
-        // ==================================================
-        // SEND REAL-TIME MESSAGE
-        // ==================================================
 
         if (receiverConnection) {
             receiverConnection.write(
@@ -288,6 +350,16 @@ export const sendMessage = async (req, res) => {
             "sendMessage error:",
             error
         );
+
+        // ==================================================
+        // CLEANUP TEMP FILE IF ERROR OCCURS
+        // ==================================================
+
+        if (uploadedFilePath) {
+            await fs
+                .unlink(uploadedFilePath)
+                .catch(() => {});
+        }
 
         return res.status(500).json({
             success: false,
@@ -576,7 +648,7 @@ export const deleteMessageForSender = async (
         message.deletedBySender = true;
 
         // ==================================================
-        // DELETE COMPLETELY IF RECEIVER ALSO DELETED
+        // DELETE COMPLETELY IF BOTH DELETED
         // ==================================================
 
         if (message.deletedByReceiver) {
@@ -677,7 +749,7 @@ export const deleteMessageForReceiver = async (
         message.deletedByReceiver = true;
 
         // ==================================================
-        // DELETE COMPLETELY IF SENDER ALSO DELETED
+        // DELETE COMPLETELY IF BOTH DELETED
         // ==================================================
 
         if (message.deletedBySender) {

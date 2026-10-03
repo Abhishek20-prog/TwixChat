@@ -1,6 +1,8 @@
 import express from "express";
 
-import { sendMessage,
+import {
+    sendMessage,
+    messageStream,
     getReceivedMessages,
     getSentMessages,
     getConversation,
@@ -8,15 +10,10 @@ import { sendMessage,
     deleteMessageForReceiver,
     markMessageAsRead
 } from "../controllers/messagecontroller.js";
+
 import { protect } from "../middleware/auth.js";
 
-
 const messageRouter = express.Router();
-
-
-// ======================================================
-// SEND MESSAGE
-// ======================================================
 
 messageRouter.post(
     "/send",
@@ -24,10 +21,11 @@ messageRouter.post(
     sendMessage
 );
 
-
-// ======================================================
-// GET RECEIVED MESSAGES
-// ======================================================
+messageRouter.get(
+    "/stream",
+    protect,
+    messageStream
+);
 
 messageRouter.get(
     "/received",
@@ -35,21 +33,11 @@ messageRouter.get(
     getReceivedMessages
 );
 
-
-// ======================================================
-// GET SENT MESSAGES
-// ======================================================
-
 messageRouter.get(
     "/sent",
     protect,
     getSentMessages
 );
-
-
-// ======================================================
-// GET CONVERSATION
-// ======================================================
 
 messageRouter.get(
     "/conversation/:userId",
@@ -57,21 +45,11 @@ messageRouter.get(
     getConversation
 );
 
-
-// ======================================================
-// DELETE MESSAGE FOR SENDER
-// ======================================================
-
 messageRouter.delete(
     "/:messageId/sender",
     protect,
     deleteMessageForSender
 );
-
-
-// ======================================================
-// DELETE MESSAGE FOR RECEIVER
-// ======================================================
 
 messageRouter.delete(
     "/:messageId/receiver",
@@ -79,16 +57,10 @@ messageRouter.delete(
     deleteMessageForReceiver
 );
 
-
-// ======================================================
-// MARK MESSAGE AS READ
-// ======================================================
-
 messageRouter.patch(
     "/:messageId/read",
     protect,
     markMessageAsRead
 );
-
 
 export default messageRouter;
