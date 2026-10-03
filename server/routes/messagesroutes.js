@@ -38,15 +38,6 @@ messageRouter.get(
     messageStream
 );
 
-// ======================================================
-// RECENT CHATS
-// ======================================================
-
-messageRouter.get(
-    "/recent",
-    protect,
-    getRecentChats
-);
 
 // ======================================================
 // RECEIVED MESSAGES
