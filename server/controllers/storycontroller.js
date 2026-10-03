@@ -3,6 +3,7 @@ import fs from "fs/promises";
 import { createReadStream } from "fs";
 import { Story } from "../models/story.js";
 import User from "../models/user.js";
+import { inngest } from "../inngest/index.js";
 
 const imagekit = new ImageKit({
     privateKey: process.env.IMAGEKIT_PRIVATE_KEY,
@@ -54,6 +55,13 @@ export const addStory = async (req, res) => {
             background_color,
         });
 
+        await inngest.send({
+            name: "app/story-deleted",
+            data: {
+                storyId: story._id.toString(),
+            },
+        });
+
         return res.status(201).json({
             success: true,
             message: "Story created successfully",
@@ -89,8 +97,13 @@ export const getUserStories = async (req, res) => {
             ...(user.following || []),
         ];
 
+        const twentyFourHoursAgo = new Date(
+            Date.now() - 24 * 60 * 60 * 1000
+        );
+
         const stories = await Story.find({
             userId: { $in: userIds },
+            createdAt: { $gte: twentyFourHoursAgo },
         })
             .populate("userId", "username profile_picture")
             .sort({ createdAt: -1 })

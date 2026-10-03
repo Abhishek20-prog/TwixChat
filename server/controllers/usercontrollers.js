@@ -4,15 +4,12 @@ import imagekit from "../config/imagekit.js";
 import User from "../models/user.js";
 import connectionModel from "../models/connection.js";
 import { getAuth, clerkClient } from "@clerk/express";
-import {Post} from "../models/post.js";
+import { Post } from "../models/post.js";
+import { inngest } from "../inngest/index.js";
 
 
 // ======================================================
 // HELPER: GET CURRENT MONGODB USER
-// ======================================================
-
-// ======================================================
-// GET CURRENT MONGODB USER
 // ======================================================
 
 const getCurrentUser = async (req) => {
@@ -35,8 +32,7 @@ const getCurrentUser = async (req) => {
         clerkId: userId
     });
 
-    // If user doesn't exist in MongoDB,
-    // get the user from Clerk
+    // Create MongoDB user if not found
     if (!user) {
         console.log("MongoDB user not found.");
         console.log("Creating MongoDB user for:", userId);
@@ -57,7 +53,6 @@ const getCurrentUser = async (req) => {
         const profilePicture =
             clerkUser.imageUrl || "";
 
-        // Create MongoDB user
         user = await User.create({
             clerkId: userId,
             username,
@@ -81,14 +76,11 @@ const getCurrentUser = async (req) => {
 // GET CURRENT USER
 // ======================================================
 
-// ======================================================
-// GET CURRENT USER
-// ======================================================
-
 export const getUser = async (req, res) => {
     try {
         const { authenticated, user } = await getCurrentUser(req);
 
+        // Check authentication
         if (!authenticated) {
             return res.status(401).json({
                 success: false,
@@ -120,7 +112,7 @@ export const updateUser = async (req, res) => {
     try {
         const { authenticated, user } = await getCurrentUser(req);
 
-        // Check Clerk authentication
+        // Check authentication
         if (!authenticated) {
             return res.status(401).json({
                 success: false,
@@ -151,7 +143,6 @@ export const updateUser = async (req, res) => {
         const newUsername = username || user.username;
 
         if (newUsername !== user.username) {
-
             const existingUser = await User.findOne({
                 username: newUsername,
                 _id: { $ne: user._id }
@@ -172,10 +163,14 @@ export const updateUser = async (req, res) => {
 
         const updatedData = {
             username: newUsername,
-            bio: bio !== undefined ? bio : user.bio,
+            bio: bio !== undefined
+                ? bio
+                : user.bio,
+
             full_name: full_name !== undefined
                 ? full_name
                 : user.full_name,
+
             location: location !== undefined
                 ? location
                 : user.location
@@ -188,26 +183,26 @@ export const updateUser = async (req, res) => {
 
         const cover = req.files?.cover?.[0];
 
-      if (cover) {
-    const buffer = fs.readFileSync(cover.path);
+        if (cover) {
+            const buffer = fs.readFileSync(cover.path);
 
-    const response = await imagekit.files.upload({
-        file: buffer,
-        fileName: cover.originalname
-    });
+            const response = await imagekit.files.upload({
+                file: buffer,
+                fileName: cover.originalname
+            });
 
-    const url = imagekit.helper.buildSrc({
-        urlEndpoint: process.env.IMAGEKIT_URL_ENDPOINT,
-        src: response.filePath,
-        transformation: [
-            { quality: "auto" },
-            { format: "webp" },
-            { width: 1280 }
-        ]
-    });
+            const url = imagekit.helper.buildSrc({
+                urlEndpoint: process.env.IMAGEKIT_URL_ENDPOINT,
+                src: response.filePath,
+                transformation: [
+                    { quality: "auto" },
+                    { format: "webp" },
+                    { width: 1280 }
+                ]
+            });
 
-    updatedData.cover_photo = url;
-}
+            updatedData.cover_photo = url;
+        }
 
 
         // ==================================================
@@ -217,7 +212,6 @@ export const updateUser = async (req, res) => {
         const profile = req.files?.profile?.[0];
 
         if (profile) {
-
             const buffer = fs.readFileSync(profile.path);
 
             const response = await imagekit.files.upload({
@@ -254,7 +248,6 @@ export const updateUser = async (req, res) => {
             }
         );
 
-
         return res.status(200).json({
             success: true,
             user: updatedUser,
@@ -262,7 +255,6 @@ export const updateUser = async (req, res) => {
         });
 
     } catch (error) {
-
         console.error("updateUser error:", error);
 
         return res.status(500).json({
@@ -278,9 +270,7 @@ export const updateUser = async (req, res) => {
 // ======================================================
 
 export const discoveruser = async (req, res) => {
-
     try {
-
         const { authenticated, user } = await getCurrentUser(req);
 
         // Check authentication
@@ -301,16 +291,13 @@ export const discoveruser = async (req, res) => {
 
         const { input = "" } = req.body;
 
-
         // Escape regex special characters
         const escapedInput = input.replace(
             /[.*+?^${}()|[\]\\]/g,
             "\\$&"
         );
 
-
         const users = await User.find({
-
             // Don't show current user
             _id: {
                 $ne: user._id
@@ -344,14 +331,12 @@ export const discoveruser = async (req, res) => {
             ]
         });
 
-
         return res.status(200).json({
             success: true,
             users
         });
 
     } catch (error) {
-
         console.error("discoveruser error:", error);
 
         return res.status(500).json({
@@ -367,9 +352,7 @@ export const discoveruser = async (req, res) => {
 // ======================================================
 
 export const followuser = async (req, res) => {
-
     try {
-
         const { authenticated, user } = await getCurrentUser(req);
 
         // Check authentication
@@ -388,9 +371,7 @@ export const followuser = async (req, res) => {
             });
         }
 
-
         const { id } = req.body;
-
 
         // Check target ID
         if (!id || !mongoose.Types.ObjectId.isValid(id)) {
@@ -400,7 +381,6 @@ export const followuser = async (req, res) => {
             });
         }
 
-
         // Cannot follow yourself
         if (user._id.toString() === id.toString()) {
             return res.status(400).json({
@@ -408,7 +388,6 @@ export const followuser = async (req, res) => {
                 message: "You cannot follow yourself"
             });
         }
-
 
         // Find target user
         const targetUser = await User.findById(id);
@@ -465,14 +444,12 @@ export const followuser = async (req, res) => {
             }
         );
 
-
         return res.status(200).json({
             success: true,
             message: "User followed successfully"
         });
 
     } catch (error) {
-
         console.error("followuser error:", error);
 
         return res.status(500).json({
@@ -488,9 +465,7 @@ export const followuser = async (req, res) => {
 // ======================================================
 
 export const unfollowuser = async (req, res) => {
-
     try {
-
         const { authenticated, user } = await getCurrentUser(req);
 
         // Check authentication
@@ -509,9 +484,7 @@ export const unfollowuser = async (req, res) => {
             });
         }
 
-
         const { id } = req.body;
-
 
         // Validate target ID
         if (!id || !mongoose.Types.ObjectId.isValid(id)) {
@@ -521,7 +494,6 @@ export const unfollowuser = async (req, res) => {
             });
         }
 
-
         // Cannot unfollow yourself
         if (user._id.toString() === id.toString()) {
             return res.status(400).json({
@@ -529,7 +501,6 @@ export const unfollowuser = async (req, res) => {
                 message: "Invalid operation"
             });
         }
-
 
         // Find target user
         const targetUser = await User.findById(id);
@@ -586,14 +557,12 @@ export const unfollowuser = async (req, res) => {
             }
         );
 
-
         return res.status(200).json({
             success: true,
             message: "User unfollowed successfully"
         });
 
     } catch (error) {
-
         console.error("unfollowuser error:", error);
 
         return res.status(500).json({
@@ -604,10 +573,10 @@ export const unfollowuser = async (req, res) => {
 };
 
 
-
-// ==========================================
+// ======================================================
 // SEND CONNECTION REQUEST
-// ==========================================
+// ======================================================
+
 export const sendConnectionRequest = async (req, res) => {
     try {
         const { authenticated, user } = await getCurrentUser(req);
@@ -629,7 +598,10 @@ export const sendConnectionRequest = async (req, res) => {
         const { id: toUserId } = req.body;
 
         // Check target ID
-        if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+        if (
+            !toUserId ||
+            !mongoose.Types.ObjectId.isValid(toUserId)
+        ) {
             return res.status(400).json({
                 success: false,
                 message: "Invalid user ID"
@@ -637,15 +609,16 @@ export const sendConnectionRequest = async (req, res) => {
         }
 
         // Prevent sending request to yourself
-        if (user._id.toString() === id.toString()) {
+        if (user._id.toString() === toUserId.toString()) {
             return res.status(400).json({
                 success: false,
-                message: "You cannot send a connection request to yourself"
+                message:
+                    "You cannot send a connection request to yourself"
             });
         }
 
-        // Check if target user exists
-        const targetUser = await User.findById(id);
+        // Check target user
+        const targetUser = await User.findById(toUserId);
 
         if (!targetUser) {
             return res.status(404).json({
@@ -654,33 +627,57 @@ export const sendConnectionRequest = async (req, res) => {
             });
         }
 
-        // Check whether connection already exists
-        const existingConnection = await connectionModel.findOne({
-            $or: [
-                {
-                    from_user_Id: user._id,
-                    to_user_Id: targetUser._id
-                },
-                {
-                    from_user_Id: targetUser._id,
-                    to_user_Id: user._id
-                }
-            ]
-        });
+
+        // ==================================================
+        // CHECK WHETHER CONNECTION ALREADY EXISTS
+        // ==================================================
+
+        const existingConnection =
+            await connectionModel.findOne({
+                $or: [
+                    {
+                        from_user_Id: user._id,
+                        to_user_Id: targetUser._id
+                    },
+                    {
+                        from_user_Id: targetUser._id,
+                        to_user_Id: user._id
+                    }
+                ]
+            });
 
         if (existingConnection) {
             return res.status(400).json({
                 success: false,
-                message: `Connection already exists with status: ${existingConnection.status}`
+                message:
+                    `Connection already exists with status: ${existingConnection.status}`
             });
         }
 
-        // Create connection request
-        const newConnection = await connectionModel.create({
-            from_user_Id: user._id,
-            to_user_Id: targetUser._id,
-            status: "pending"
+
+        // ==================================================
+        // CREATE CONNECTION REQUEST
+        // ==================================================
+
+        const newConnection =
+            await connectionModel.create({
+                from_user_Id: user._id,
+                to_user_Id: targetUser._id,
+                status: "pending"
+            });
+
+
+        // ==================================================
+        // TRIGGER INNGEST EMAIL
+        // ==================================================
+
+        await inngest.send({
+            name: "app/connection-request",
+            data: {
+                connectionId: newConnection._id.toString()
+            }
         });
+
 
         return res.status(201).json({
             success: true,
@@ -689,7 +686,10 @@ export const sendConnectionRequest = async (req, res) => {
         });
 
     } catch (error) {
-        console.error("sendConnectionRequest error:", error);
+        console.error(
+            "sendConnectionRequest error:",
+            error
+        );
 
         return res.status(500).json({
             success: false,
@@ -699,9 +699,10 @@ export const sendConnectionRequest = async (req, res) => {
 };
 
 
-// ==========================================
+// ======================================================
 // GET USER CONNECTIONS
-// ==========================================
+// ======================================================
+
 export const getUserConnections = async (req, res) => {
     try {
         const { authenticated, user } = await getCurrentUser(req);
@@ -720,35 +721,53 @@ export const getUserConnections = async (req, res) => {
             });
         }
 
+
         // Get accepted connections
-        const connections = await User.findById(user._id)
-            .populate("connections");
+        const connections =
+            await User.findById(user._id)
+                .populate("connections");
+
 
         // Get pending requests
-        const pendingConnections = await connectionModel
-            .find({
-                to_user_Id: user._id,
-                status: "pending"
-            })
-            .populate("from_user_Id");
+        const pendingConnections =
+            await connectionModel
+                .find({
+                    to_user_Id: user._id,
+                    status: "pending"
+                })
+                .populate("from_user_Id");
+
 
         // Extract users who sent requests
-        const pendingUsers = pendingConnections.map(
-            connection => connection.from_user_Id
-        );
+        const pendingUsers =
+            pendingConnections.map(
+                connection =>
+                    connection.from_user_Id
+            );
+
 
         return res.status(200).json({
             success: true,
             data: {
-                connections: connections?.connections || [],
-                followers: user.followers || [],
-                following: user.following || [],
-                pendingConnections: pendingUsers
+                connections:
+                    connections?.connections || [],
+
+                followers:
+                    user.followers || [],
+
+                following:
+                    user.following || [],
+
+                pendingConnections:
+                    pendingUsers
             }
         });
 
     } catch (error) {
-        console.error("getUserConnections error:", error);
+        console.error(
+            "getUserConnections error:",
+            error
+        );
 
         return res.status(500).json({
             success: false,
@@ -758,9 +777,10 @@ export const getUserConnections = async (req, res) => {
 };
 
 
-// ==========================================
+// ======================================================
 // ACCEPT CONNECTION REQUEST
-// ==========================================
+// ======================================================
+
 export const acceptConnectionRequest = async (req, res) => {
     try {
         const { authenticated, user } = await getCurrentUser(req);
@@ -782,19 +802,27 @@ export const acceptConnectionRequest = async (req, res) => {
         const { id: fromUserId } = req.body;
 
         // Validate ID
-        if (!fromUserId || !mongoose.Types.ObjectId.isValid(fromUserId)) {
+        if (
+            !fromUserId ||
+            !mongoose.Types.ObjectId.isValid(fromUserId)
+        ) {
             return res.status(400).json({
                 success: false,
                 message: "Invalid user ID"
             });
         }
 
-        // Find pending request
-        const connection = await connectionModel.findOne({
-            from_user_Id: fromUserId,
-            to_user_Id: user._id,
-            status: "pending"
-        });
+
+        // ==================================================
+        // FIND PENDING CONNECTION REQUEST
+        // ==================================================
+
+        const connection =
+            await connectionModel.findOne({
+                from_user_Id: fromUserId,
+                to_user_Id: user._id,
+                status: "pending"
+            });
 
         if (!connection) {
             return res.status(404).json({
@@ -803,8 +831,13 @@ export const acceptConnectionRequest = async (req, res) => {
             });
         }
 
-        // Find requesting user
-        const requestingUser = await User.findById(fromUserId);
+
+        // ==================================================
+        // FIND REQUESTING USER
+        // ==================================================
+
+        const requestingUser =
+            await User.findById(fromUserId);
 
         if (!requestingUser) {
             return res.status(404).json({
@@ -813,19 +846,43 @@ export const acceptConnectionRequest = async (req, res) => {
             });
         }
 
-        // Add users to each other's connections
-        if (!user.connections.includes(requestingUser._id)) {
-            user.connections.push(requestingUser._id);
+
+        // ==================================================
+        // ADD USERS TO EACH OTHER'S CONNECTIONS
+        // ==================================================
+
+        if (
+            !user.connections.includes(
+                requestingUser._id
+            )
+        ) {
+            user.connections.push(
+                requestingUser._id
+            );
         }
 
-        if (!requestingUser.connections.includes(user._id)) {
-            requestingUser.connections.push(user._id);
+        if (
+            !requestingUser.connections.includes(
+                user._id
+            )
+        ) {
+            requestingUser.connections.push(
+                user._id
+            );
         }
 
-        // Update request status
+
+        // ==================================================
+        // UPDATE REQUEST STATUS
+        // ==================================================
+
         connection.status = "accepted";
 
-        // Save all changes
+
+        // ==================================================
+        // SAVE ALL CHANGES
+        // ==================================================
+
         await Promise.all([
             user.save(),
             requestingUser.save(),
@@ -834,11 +891,15 @@ export const acceptConnectionRequest = async (req, res) => {
 
         return res.status(200).json({
             success: true,
-            message: "Connection request accepted successfully"
+            message:
+                "Connection request accepted successfully"
         });
 
     } catch (error) {
-        console.error("acceptConnectionRequest error:", error);
+        console.error(
+            "acceptConnectionRequest error:",
+            error
+        );
 
         return res.status(500).json({
             success: false,
@@ -846,13 +907,34 @@ export const acceptConnectionRequest = async (req, res) => {
         });
     }
 };
-//Get user profiles
+
+
+// ======================================================
+// GET USER PROFILE
+// ======================================================
+
 export const getUserProfiles = async (req, res) => {
     try {
-       
-        const {profileId} = req.params;
-        // Find the specific user profile
-        const profile = await User.findById(profileId);
+        const { profileId } = req.params;
+
+        // Validate profile ID
+        if (
+            !profileId ||
+            !mongoose.Types.ObjectId.isValid(profileId)
+        ) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid profile ID"
+            });
+        }
+
+
+        // ==================================================
+        // FIND USER PROFILE
+        // ==================================================
+
+        const profile =
+            await User.findById(profileId);
 
         if (!profile) {
             return res.status(404).json({
@@ -860,18 +942,34 @@ export const getUserProfiles = async (req, res) => {
                 message: "Profile not found"
             });
         }
-        const {posts}=Post.find({userId:profileId}).sort({createdAt:-1}).populate("userId","username profile_picture full_name");
+
+
+        // ==================================================
+        // GET USER POSTS
+        // ==================================================
+
+        const posts =
+            await Post.find({
+                userId: profileId
+            })
+                .sort({ createdAt: -1 })
+                .populate(
+                    "userId",
+                    "username profile_picture full_name"
+                );
+
+
         return res.status(200).json({
             success: true,
             profile,
             posts
         });
 
-        
-       
-
     } catch (error) {
-        console.error("getUserProfiles error:", error);
+        console.error(
+            "getUserProfiles error:",
+            error
+        );
 
         return res.status(500).json({
             success: false,
@@ -879,7 +977,3 @@ export const getUserProfiles = async (req, res) => {
         });
     }
 };
-
-
-
-    
