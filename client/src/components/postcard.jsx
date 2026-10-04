@@ -8,8 +8,10 @@ import {
   MoreHorizontal,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import{useSelector} from "react-redux"
 
 const PostCard = ({ post }) => {
+  const { user } = useSelector((state) => state.user);
   const navigate = useNavigate()
   return (
     <div className="w-full max-w-lg mx-auto bg-white rounded-xl border border-gray-200 overflow-hidden">

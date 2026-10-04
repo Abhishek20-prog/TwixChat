@@ -3,8 +3,11 @@ import { Menu } from "lucide-react";
 import { Outlet } from "react-router-dom";
 
 import Sidebar from "../components/sidebar";
-
+import { useSelector } from "react-redux";
 const Layout = () => {
+  const { user } = useSelector((state) => state.user);
+ 
+
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (

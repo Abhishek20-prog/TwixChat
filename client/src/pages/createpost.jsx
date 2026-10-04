@@ -8,8 +8,10 @@ import {
   Send,
   Sparkles,
 } from "lucide-react";
+import { useSelector } from "react-redux";
 
 const CreatePost = () => {
+  const { user } = useSelector((state) => state.user);
   const [postType, setPostType] = useState("text");
   const [content, setContent] = useState("");
   const [location, setLocation] = useState("");
