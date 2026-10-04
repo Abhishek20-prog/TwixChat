@@ -17,7 +17,8 @@ import logo from "../assets/twixchat-removebg-preview.png";
 
 const Sidebar = ({ isOpen, setIsOpen }) => {
     const { user } = useSelector((state) => state.user);
-    const { signOut } = useClerk();
+
+    const { signOut, openUserProfile } = useClerk();
 
     // ======================================================
     // NAVIGATION
@@ -210,7 +211,6 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                                         font-medium
                                         transition-all
                                         duration-200
-
                                         ${
                                             isActive
                                                 ? `
@@ -257,7 +257,6 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                                                     shrink-0
                                                     transition-all
                                                     duration-200
-
                                                     ${
                                                         isActive
                                                             ? "text-[#C68A24]"
@@ -276,7 +275,6 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                                                     z-10
                                                     transition-transform
                                                     duration-200
-
                                                     ${
                                                         !isActive
                                                             ? "group-hover:translate-x-0.5"
@@ -409,44 +407,61 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                     "
                 >
                     <div className="flex min-w-0 items-center gap-2">
-                        {/* PROFILE IMAGE */}
+                        {/* ==================================================
+                            MONGODB PROFILE PICTURE
+                        ================================================== */}
 
-                        {user?.profile_picture ? (
-                            <img
-                                src={user.profile_picture}
-                                alt={
-                                    user.full_name ||
-                                    "User"
-                                }
-                                className="
-                                    h-9
-                                    w-9
-                                    shrink-0
-                                    rounded-full
-                                    object-cover
-                                "
-                            />
-                        ) : (
-                            <div
-                                className="
-                                    flex
-                                    h-9
-                                    w-9
-                                    shrink-0
-                                    items-center
-                                    justify-center
-                                    rounded-full
-                                    bg-[#FFF9EF]
-                                    text-sm
-                                    font-semibold
-                                    text-[#C68A24]
-                                "
-                            >
-                                {userInitial}
-                            </div>
-                        )}
+                        <button
+                            type="button"
+                            onClick={openUserProfile}
+                            aria-label="Open account profile"
+                            className="
+                                shrink-0
+                                rounded-full
+                                transition-all
+                                duration-200
+                                hover:scale-105
+                                hover:shadow-md
+                                active:scale-95
+                            "
+                        >
+                            {user?.profile_picture ? (
+                                <img
+                                    src={user.profile_picture}
+                                    alt={
+                                        user.full_name ||
+                                        "User"
+                                    }
+                                    className="
+                                        h-9
+                                        w-9
+                                        rounded-full
+                                        object-cover
+                                    "
+                                />
+                            ) : (
+                                <div
+                                    className="
+                                        flex
+                                        h-9
+                                        w-9
+                                        items-center
+                                        justify-center
+                                        rounded-full
+                                        bg-[#FFF9EF]
+                                        text-sm
+                                        font-semibold
+                                        text-[#C68A24]
+                                    "
+                                >
+                                    {userInitial}
+                                </div>
+                            )}
+                        </button>
 
-                        {/* USER INFO */}
+                        {/* ==================================================
+                            USER INFO
+                        ================================================== */}
 
                         <div className="min-w-0">
                             <h1 className="truncate text-sm font-medium">
@@ -459,7 +474,9 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                         </div>
                     </div>
 
-                    {/* LOGOUT */}
+                    {/* ======================================================
+                        LOGOUT BUTTON
+                    ====================================================== */}
 
                     <button
                         type="button"
@@ -468,12 +485,17 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                         className="
                             ml-2
                             shrink-0
+                            rounded-lg
+                            p-2
                             text-gray-400
-                            transition
-                            hover:text-gray-700
+                            transition-all
+                            duration-200
+                            hover:bg-red-50
+                            hover:text-red-500
+                            active:scale-90
                         "
                     >
-                        <LogOut className="w-[18px]" />
+                        <LogOut size={18} />
                     </button>
                 </div>
             </aside>
