@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+
 import {
     ArrowLeft,
     Camera,
@@ -8,18 +9,17 @@ import {
     AtSign,
     MapPin,
     FileText,
+    Image,
 } from "lucide-react";
+
 import { useAuth } from "@clerk/react";
 import { useDispatch, useSelector } from "react-redux";
 
 import { updateCurrentUser } from "../features/user/userslice";
 
-// ======================================================
-// EDIT PROFILE
-// ======================================================
-
 const EditProfile = ({ setShowEdit }) => {
-    const fileInputRef = useRef(null);
+    const profileInputRef = useRef(null);
+    const coverInputRef = useRef(null);
 
     const { getToken } = useAuth();
     const dispatch = useDispatch();
@@ -28,10 +28,6 @@ const EditProfile = ({ setShowEdit }) => {
         (state) => state.user
     );
 
-    // ======================================================
-    // FORM STATE
-    // ======================================================
-
     const [formData, setFormData] = useState({
         name: "",
         username: "",
@@ -39,28 +35,57 @@ const EditProfile = ({ setShowEdit }) => {
         location: "",
     });
 
+    // ======================================================
+    // PROFILE PHOTO
+    // ======================================================
+
     const [dp, setDp] = useState("");
-    const [selectedFile, setSelectedFile] = useState(null);
+    const [selectedProfileFile, setSelectedProfileFile] =
+        useState(null);
+
+    const [removeProfilePicture, setRemoveProfilePicture] =
+        useState(false);
 
     // ======================================================
-    // LOAD CURRENT USER
+    // COVER PHOTO
     // ======================================================
 
-    useEffect(() => {
-        if (!user) return;
+    const [coverPhoto, setCoverPhoto] = useState("");
+    const [selectedCoverFile, setSelectedCoverFile] =
+        useState(null);
 
-        setFormData({
-            name: user.full_name || "",
-            username: user.username || "",
-            bio: user.bio || "",
-            location: user.location || "",
-        });
-
-        setDp(user.profile_picture || "");
-    }, [user]);
+    const [removeCoverPhoto, setRemoveCoverPhoto] =
+        useState(false);
 
     // ======================================================
-    // INPUT CHANGE
+    // LOAD USER DATA
+    // ======================================================
+
+   const initializedRef = useRef(false);
+
+useEffect(() => {
+    if (!user || initializedRef.current) return;
+
+    initializedRef.current = true;
+
+    setFormData({
+        name: user.full_name || "",
+        username: user.username || "",
+        bio: user.bio || "",
+        location: user.location || "",
+    });
+
+    setDp(user.profile_picture || "");
+    setCoverPhoto(user.cover_photo || "");
+
+    setSelectedProfileFile(null);
+    setSelectedCoverFile(null);
+    setRemoveProfilePicture(false);
+    setRemoveCoverPhoto(false);
+}, [user]);
+
+    // ======================================================
+    // FORM CHANGE
     // ======================================================
 
     const handleChange = (e) => {
@@ -73,48 +98,113 @@ const EditProfile = ({ setShowEdit }) => {
     };
 
     // ======================================================
-    // CHANGE PROFILE PICTURE
+    // ENTER KEY HANDLER
+    // ENTER = SAVE
+    // SHIFT + ENTER = NEW LINE IN BIO
     // ======================================================
 
-    const handleImageChange = (e) => {
-        const file = e.target.files?.[0];
+    const handleKeyDown = (e) => {
+        if (
+            e.key === "Enter" &&
+            !e.shiftKey &&
+            !loading
+        ) {
+            e.preventDefault();
 
-        if (!file) return;
-
-        setSelectedFile(file);
-
-        const imageUrl = URL.createObjectURL(file);
-        setDp(imageUrl);
-    };
-
-    // ======================================================
-    // REMOVE PROFILE PICTURE
-    // ======================================================
-
-    const removeImage = () => {
-        setDp("");
-        setSelectedFile(null);
-
-        if (fileInputRef.current) {
-            fileInputRef.current.value = "";
+            e.currentTarget.form?.requestSubmit();
         }
     };
 
     // ======================================================
-    // SAVE CHANGES
+    // PROFILE IMAGE CHANGE
+    // ======================================================
+
+    const handleProfileImageChange = (e) => {
+        const file = e.target.files?.[0];
+
+        if (!file) return;
+
+        setSelectedProfileFile(file);
+
+        const imageUrl =
+            URL.createObjectURL(file);
+
+        setDp(imageUrl);
+
+        setRemoveProfilePicture(false);
+    };
+
+    // ======================================================
+    // REMOVE PROFILE IMAGE
+    // ======================================================
+
+    const removeProfileImage = () => {
+        setDp("");
+        setSelectedProfileFile(null);
+        setRemoveProfilePicture(true);
+
+        if (profileInputRef.current) {
+            profileInputRef.current.value = "";
+        }
+    };
+
+    // ======================================================
+    // COVER IMAGE CHANGE
+    // ======================================================
+
+    const handleCoverImageChange = (e) => {
+        const file = e.target.files?.[0];
+
+        if (!file) return;
+
+        setSelectedCoverFile(file);
+
+        const imageUrl =
+            URL.createObjectURL(file);
+
+        setCoverPhoto(imageUrl);
+
+        setRemoveCoverPhoto(false);
+    };
+
+    // ======================================================
+    // REMOVE COVER IMAGE
+    // ======================================================
+
+    const removeCoverImage = () => {
+        setCoverPhoto("");
+        setSelectedCoverFile(null);
+        setRemoveCoverPhoto(true);
+
+        if (coverInputRef.current) {
+            coverInputRef.current.value = "";
+        }
+    };
+
+    // ======================================================
+    // SUBMIT
     // ======================================================
 
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        try {
-            const token = await getToken({
-                template: "twixchat",
-            });
+        if (loading) return;
 
-            if (!token) return;
+        try {
+            const token = await getToken();
+
+            if (!token) {
+                console.error(
+                    "No Clerk token received"
+                );
+                return;
+            }
 
             const userData = new FormData();
+
+            // ==================================================
+            // TEXT DATA
+            // ==================================================
 
             userData.append(
                 "full_name",
@@ -136,9 +226,51 @@ const EditProfile = ({ setShowEdit }) => {
                 formData.location.trim()
             );
 
-            if (selectedFile) {
-                userData.append("profile", selectedFile);
+            // ==================================================
+            // PROFILE IMAGE
+            // ==================================================
+
+            if (selectedProfileFile) {
+                userData.append(
+                    "profile",
+                    selectedProfileFile
+                );
             }
+
+            if (
+                removeProfilePicture &&
+                !selectedProfileFile
+            ) {
+                userData.append(
+                    "remove_profile_picture",
+                    "true"
+                );
+            }
+
+            // ==================================================
+            // COVER IMAGE
+            // ==================================================
+
+            if (selectedCoverFile) {
+                userData.append(
+                    "cover",
+                    selectedCoverFile
+                );
+            }
+
+            if (
+                removeCoverPhoto &&
+                !selectedCoverFile
+            ) {
+                userData.append(
+                    "remove_cover_photo",
+                    "true"
+                );
+            }
+
+            // ==================================================
+            // UPDATE USER
+            // ==================================================
 
             await dispatch(
                 updateCurrentUser({
@@ -146,6 +278,10 @@ const EditProfile = ({ setShowEdit }) => {
                     userData,
                 })
             ).unwrap();
+
+            // ==================================================
+            // CLOSE MODAL
+            // ==================================================
 
             setShowEdit(false);
         } catch (error) {
@@ -164,32 +300,28 @@ const EditProfile = ({ setShowEdit }) => {
         setShowEdit(false);
     };
 
-    // ======================================================
-    // UI
-    // ======================================================
-
     return (
         <div
             className="
                 fixed
                 inset-0
                 z-50
-                bg-black/30
-                backdrop-blur-sm
                 flex
                 items-center
                 justify-center
+                bg-black/30
                 p-4
+                backdrop-blur-sm
             "
         >
             <div
                 className="
+                    max-h-[90vh]
                     w-full
                     max-w-xl
-                    max-h-[90vh]
                     overflow-y-auto
-                    bg-white
                     rounded-3xl
+                    bg-white
                     shadow-2xl
                 "
             >
@@ -201,15 +333,15 @@ const EditProfile = ({ setShowEdit }) => {
                     className="
                         sticky
                         top-0
-                        z-10
-                        bg-white
-                        border-b
-                        border-gray-100
-                        px-5
-                        py-4
+                        z-20
                         flex
                         items-center
                         justify-between
+                        border-b
+                        border-gray-100
+                        bg-white
+                        px-5
+                        py-4
                     "
                 >
                     <div className="flex items-center gap-3">
@@ -217,27 +349,38 @@ const EditProfile = ({ setShowEdit }) => {
                             type="button"
                             onClick={handleCancel}
                             className="
-                                w-9
-                                h-9
-                                rounded-full
                                 flex
+                                h-9
+                                w-9
+                                cursor-pointer
                                 items-center
                                 justify-center
+                                rounded-full
                                 text-gray-500
-                                hover:bg-gray-100
-                                cursor-pointer
                                 transition
+                                hover:bg-gray-100
                             "
                         >
                             <ArrowLeft size={19} />
                         </button>
 
                         <div>
-                            <h2 className="text-lg font-bold text-[#17383A]">
+                            <h2
+                                className="
+                                    text-lg
+                                    font-bold
+                                    text-[#17383A]
+                                "
+                            >
                                 Edit Profile
                             </h2>
 
-                            <p className="text-xs text-gray-400">
+                            <p
+                                className="
+                                    text-xs
+                                    text-gray-400
+                                "
+                            >
                                 Update your profile information
                             </p>
                         </div>
@@ -247,92 +390,114 @@ const EditProfile = ({ setShowEdit }) => {
                         type="button"
                         onClick={handleCancel}
                         className="
-                            w-9
-                            h-9
-                            rounded-full
                             flex
+                            h-9
+                            w-9
+                            cursor-pointer
                             items-center
                             justify-center
+                            rounded-full
                             text-gray-400
                             hover:bg-gray-100
                             hover:text-gray-600
-                            cursor-pointer
                         "
                     >
                         <X size={18} />
                     </button>
                 </div>
 
-                {/* ======================================================
-                    FORM
-                ====================================================== */}
-
                 <form onSubmit={handleSubmit}>
                     <div className="p-6">
 
                         {/* ==================================================
-                            PROFILE IMAGE
+                            COVER PHOTO
                         ================================================== */}
 
-                        <div className="flex flex-col items-center">
-                            <div className="relative">
-                                {dp ? (
+                        <div>
+                            <label
+                                className="
+                                    mb-2
+                                    flex
+                                    items-center
+                                    gap-2
+                                    text-xs
+                                    font-semibold
+                                    text-[#35514E]
+                                "
+                            >
+                                <Image size={14} />
+                                Cover Photo
+                            </label>
+
+                            <div
+                                className="
+                                    relative
+                                    h-40
+                                    w-full
+                                    overflow-hidden
+                                    rounded-2xl
+                                    border
+                                    border-[#DDE8E5]
+                                    bg-gradient-to-r
+                                    from-[#E8F5F3]
+                                    via-[#F7FAF9]
+                                    to-[#E8F5F3]
+                                "
+                            >
+                                {coverPhoto ? (
                                     <img
-                                        src={dp}
-                                        alt={formData.name}
+                                        src={coverPhoto}
+                                        alt="Cover preview"
                                         className="
-                                            w-28
-                                            h-28
-                                            rounded-full
+                                            h-full
+                                            w-full
                                             object-cover
-                                            border-4
-                                            border-white
-                                            shadow-lg
                                         "
                                     />
                                 ) : (
                                     <div
                                         className="
-                                            w-28
-                                            h-28
-                                            rounded-full
-                                            bg-[#E8F5F3]
-                                            text-[#17383A]
                                             flex
+                                            h-full
+                                            w-full
+                                            flex-col
                                             items-center
                                             justify-center
-                                            text-3xl
-                                            font-bold
+                                            gap-2
+                                            text-gray-400
                                         "
                                     >
-                                        {formData.name
-                                            ?.charAt(0)
-                                            ?.toUpperCase() || "U"}
+                                        <Image size={28} />
+
+                                        <p className="text-xs">
+                                            No cover photo
+                                        </p>
                                     </div>
                                 )}
 
                                 <button
                                     type="button"
                                     onClick={() =>
-                                        fileInputRef.current?.click()
+                                        coverInputRef.current?.click()
                                     }
                                     className="
                                         absolute
-                                        bottom-0
-                                        right-0
-                                        w-9
-                                        h-9
-                                        rounded-full
-                                        bg-[#17383A]
-                                        text-white
-                                        border-4
-                                        border-white
+                                        bottom-3
+                                        right-3
                                         flex
+                                        h-9
+                                        w-9
+                                        cursor-pointer
                                         items-center
                                         justify-center
-                                        hover:bg-[#285557]
-                                        cursor-pointer
+                                        rounded-full
+                                        border-2
+                                        border-white
+                                        bg-[#17383A]
+                                        text-white
+                                        shadow-md
                                         transition
+                                        hover:bg-[#285557]
                                     "
                                 >
                                     <Camera size={15} />
@@ -340,40 +505,53 @@ const EditProfile = ({ setShowEdit }) => {
                             </div>
 
                             <input
-                                ref={fileInputRef}
+                                ref={coverInputRef}
                                 type="file"
                                 accept="image/*"
-                                onChange={handleImageChange}
+                                onChange={
+                                    handleCoverImageChange
+                                }
                                 className="hidden"
                             />
 
-                            <div className="flex items-center gap-4 mt-4">
+                            <div
+                                className="
+                                    mt-3
+                                    flex
+                                    items-center
+                                    gap-4
+                                "
+                            >
                                 <button
                                     type="button"
                                     onClick={() =>
-                                        fileInputRef.current?.click()
+                                        coverInputRef.current?.click()
                                     }
                                     className="
+                                        cursor-pointer
                                         text-xs
                                         font-semibold
                                         text-[#4A8980]
                                         hover:text-[#285557]
-                                        cursor-pointer
                                     "
                                 >
-                                    Change photo
+                                    {coverPhoto
+                                        ? "Change cover"
+                                        : "Add cover photo"}
                                 </button>
 
-                                {dp && (
+                                {coverPhoto && (
                                     <button
                                         type="button"
-                                        onClick={removeImage}
+                                        onClick={
+                                            removeCoverImage
+                                        }
                                         className="
+                                            cursor-pointer
                                             text-xs
                                             font-semibold
                                             text-red-400
                                             hover:text-red-500
-                                            cursor-pointer
                                         "
                                     >
                                         Remove
@@ -383,7 +561,141 @@ const EditProfile = ({ setShowEdit }) => {
                         </div>
 
                         {/* ==================================================
-                            INPUTS
+                            PROFILE PHOTO
+                        ================================================== */}
+
+                        <div
+                            className="
+                                mt-8
+                                flex
+                                flex-col
+                                items-center
+                            "
+                        >
+                            <div className="relative">
+                                {dp ? (
+                                    <img
+                                        src={dp}
+                                        alt={
+                                            formData.name ||
+                                            "User"
+                                        }
+                                        className="
+                                            h-28
+                                            w-28
+                                            rounded-full
+                                            border-4
+                                            border-white
+                                            object-cover
+                                            shadow-lg
+                                        "
+                                    />
+                                ) : (
+                                    <div
+                                        className="
+                                            flex
+                                            h-28
+                                            w-28
+                                            items-center
+                                            justify-center
+                                            rounded-full
+                                            bg-[#E8F5F3]
+                                            text-3xl
+                                            font-bold
+                                            text-[#17383A]
+                                        "
+                                    >
+                                        {formData.name
+                                            ?.charAt(0)
+                                            ?.toUpperCase() ||
+                                            "U"}
+                                    </div>
+                                )}
+
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        profileInputRef.current?.click()
+                                    }
+                                    className="
+                                        absolute
+                                        bottom-0
+                                        right-0
+                                        flex
+                                        h-9
+                                        w-9
+                                        cursor-pointer
+                                        items-center
+                                        justify-center
+                                        rounded-full
+                                        border-4
+                                        border-white
+                                        bg-[#17383A]
+                                        text-white
+                                        transition
+                                        hover:bg-[#285557]
+                                    "
+                                >
+                                    <Camera size={15} />
+                                </button>
+                            </div>
+
+                            <input
+                                ref={profileInputRef}
+                                type="file"
+                                accept="image/*"
+                                onChange={
+                                    handleProfileImageChange
+                                }
+                                className="hidden"
+                            />
+
+                            <div
+                                className="
+                                    mt-4
+                                    flex
+                                    items-center
+                                    gap-4
+                                "
+                            >
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        profileInputRef.current?.click()
+                                    }
+                                    className="
+                                        cursor-pointer
+                                        text-xs
+                                        font-semibold
+                                        text-[#4A8980]
+                                        hover:text-[#285557]
+                                    "
+                                >
+                                    Change photo
+                                </button>
+
+                                {dp && (
+                                    <button
+                                        type="button"
+                                        onClick={
+                                            removeProfileImage
+                                        }
+                                        className="
+                                            cursor-pointer
+                                            text-xs
+                                            font-semibold
+                                            text-red-400
+                                            hover:text-red-500
+                                        "
+                                    >
+                                        Remove
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* ==================================================
+                            FORM FIELDS
                         ================================================== */}
 
                         <div className="mt-8 space-y-5">
@@ -393,13 +705,13 @@ const EditProfile = ({ setShowEdit }) => {
                             <div>
                                 <label
                                     className="
+                                        mb-2
                                         flex
                                         items-center
                                         gap-2
                                         text-xs
                                         font-semibold
                                         text-[#35514E]
-                                        mb-2
                                     "
                                 >
                                     <User size={14} />
@@ -411,21 +723,22 @@ const EditProfile = ({ setShowEdit }) => {
                                     name="name"
                                     value={formData.name}
                                     onChange={handleChange}
+                                    onKeyDown={handleKeyDown}
                                     placeholder="Your name"
                                     className="
-                                        w-full
                                         h-12
-                                        px-4
+                                        w-full
                                         rounded-xl
-                                        bg-[#F7FAF9]
                                         border
                                         border-[#DDE8E5]
-                                        outline-none
+                                        bg-[#F7FAF9]
+                                        px-4
                                         text-sm
                                         text-[#17383A]
+                                        outline-none
+                                        transition
                                         focus:border-[#6EA7A0]
                                         focus:bg-white
-                                        transition
                                     "
                                 />
                             </div>
@@ -435,13 +748,13 @@ const EditProfile = ({ setShowEdit }) => {
                             <div>
                                 <label
                                     className="
+                                        mb-2
                                         flex
                                         items-center
                                         gap-2
                                         text-xs
                                         font-semibold
                                         text-[#35514E]
-                                        mb-2
                                     "
                                 >
                                     <AtSign size={14} />
@@ -453,21 +766,22 @@ const EditProfile = ({ setShowEdit }) => {
                                     name="username"
                                     value={formData.username}
                                     onChange={handleChange}
+                                    onKeyDown={handleKeyDown}
                                     placeholder="@username"
                                     className="
-                                        w-full
                                         h-12
-                                        px-4
+                                        w-full
                                         rounded-xl
-                                        bg-[#F7FAF9]
                                         border
                                         border-[#DDE8E5]
-                                        outline-none
+                                        bg-[#F7FAF9]
+                                        px-4
                                         text-sm
                                         text-[#17383A]
+                                        outline-none
+                                        transition
                                         focus:border-[#6EA7A0]
                                         focus:bg-white
-                                        transition
                                     "
                                 />
                             </div>
@@ -477,13 +791,13 @@ const EditProfile = ({ setShowEdit }) => {
                             <div>
                                 <label
                                     className="
+                                        mb-2
                                         flex
                                         items-center
                                         gap-2
                                         text-xs
                                         font-semibold
                                         text-[#35514E]
-                                        mb-2
                                     "
                                 >
                                     <FileText size={14} />
@@ -494,28 +808,36 @@ const EditProfile = ({ setShowEdit }) => {
                                     name="bio"
                                     value={formData.bio}
                                     onChange={handleChange}
+                                    onKeyDown={handleKeyDown}
                                     placeholder="Tell people about yourself..."
                                     rows={4}
                                     maxLength={150}
                                     className="
                                         w-full
-                                        px-4
-                                        py-3
+                                        resize-none
                                         rounded-xl
-                                        bg-[#F7FAF9]
                                         border
                                         border-[#DDE8E5]
-                                        outline-none
-                                        resize-none
+                                        bg-[#F7FAF9]
+                                        px-4
+                                        py-3
                                         text-sm
                                         text-[#17383A]
+                                        outline-none
+                                        transition
                                         focus:border-[#6EA7A0]
                                         focus:bg-white
-                                        transition
                                     "
                                 />
 
-                                <p className="text-right text-[10px] text-gray-400 mt-1">
+                                <p
+                                    className="
+                                        mt-1
+                                        text-right
+                                        text-[10px]
+                                        text-gray-400
+                                    "
+                                >
                                     {formData.bio.length}/150
                                 </p>
                             </div>
@@ -525,13 +847,13 @@ const EditProfile = ({ setShowEdit }) => {
                             <div>
                                 <label
                                     className="
+                                        mb-2
                                         flex
                                         items-center
                                         gap-2
                                         text-xs
                                         font-semibold
                                         text-[#35514E]
-                                        mb-2
                                     "
                                 >
                                     <MapPin size={14} />
@@ -543,21 +865,22 @@ const EditProfile = ({ setShowEdit }) => {
                                     name="location"
                                     value={formData.location}
                                     onChange={handleChange}
+                                    onKeyDown={handleKeyDown}
                                     placeholder="Add location"
                                     className="
-                                        w-full
                                         h-12
-                                        px-4
+                                        w-full
                                         rounded-xl
-                                        bg-[#F7FAF9]
                                         border
                                         border-[#DDE8E5]
-                                        outline-none
+                                        bg-[#F7FAF9]
+                                        px-4
                                         text-sm
                                         text-[#17383A]
+                                        outline-none
+                                        transition
                                         focus:border-[#6EA7A0]
                                         focus:bg-white
-                                        transition
                                     "
                                 />
                             </div>
@@ -568,39 +891,45 @@ const EditProfile = ({ setShowEdit }) => {
                         ================================================== */}
 
                         {error && (
-                            <p className="mt-4 text-xs text-red-500">
+                            <p
+                                className="
+                                    mt-4
+                                    text-xs
+                                    text-red-500
+                                "
+                            >
                                 {error}
                             </p>
                         )}
 
                         {/* ==================================================
-                            BUTTONS
+                            ACTION BUTTONS
                         ================================================== */}
 
                         <div
                             className="
                                 mt-7
-                                pt-5
-                                border-t
-                                border-gray-100
                                 flex
                                 justify-end
                                 gap-3
+                                border-t
+                                border-gray-100
+                                pt-5
                             "
                         >
                             <button
                                 type="button"
                                 onClick={handleCancel}
                                 className="
+                                    cursor-pointer
+                                    rounded-xl
                                     px-5
                                     py-3
-                                    rounded-xl
                                     text-xs
                                     font-semibold
                                     text-gray-500
-                                    hover:bg-gray-100
-                                    cursor-pointer
                                     transition
+                                    hover:bg-gray-100
                                 "
                             >
                                 Cancel
@@ -610,22 +939,22 @@ const EditProfile = ({ setShowEdit }) => {
                                 type="submit"
                                 disabled={loading}
                                 className="
-                                    px-6
-                                    py-3
-                                    rounded-xl
-                                    bg-[#17383A]
-                                    text-white
-                                    text-xs
-                                    font-semibold
                                     flex
+                                    cursor-pointer
                                     items-center
                                     gap-2
-                                    hover:bg-[#285557]
-                                    hover:-translate-y-0.5
-                                    cursor-pointer
+                                    rounded-xl
+                                    bg-[#17383A]
+                                    px-6
+                                    py-3
+                                    text-xs
+                                    font-semibold
+                                    text-white
                                     transition
-                                    disabled:opacity-60
+                                    hover:-translate-y-0.5
+                                    hover:bg-[#285557]
                                     disabled:cursor-not-allowed
+                                    disabled:opacity-60
                                     disabled:hover:translate-y-0
                                 "
                             >

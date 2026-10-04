@@ -4,14 +4,20 @@ import {
     Link as LinkIcon,
     Edit,
     Users,
+    MessageCircle,
+    UserPlus,
 } from "lucide-react";
 
+import { useNavigate } from "react-router-dom";
+
 const UserProfile = ({
-    user,
+   user,
     posts,
     setshowedit,
-    profileID,
+    isOwnProfile,
 }) => {
+    const navigate = useNavigate();
+
     return (
         <div className="bg-white px-6 pb-6">
 
@@ -39,7 +45,9 @@ const UserProfile = ({
                     {/* PROFILE PICTURE */}
 
                     <div className="relative -mt-14 shrink-0">
+
                         {user.profile_picture ? (
+
                             <img
                                 src={user.profile_picture}
                                 alt={user.full_name || "User"}
@@ -53,7 +61,9 @@ const UserProfile = ({
                                     shadow-md
                                 "
                             />
+
                         ) : (
+
                             <div
                                 className="
                                     flex
@@ -75,12 +85,15 @@ const UserProfile = ({
                                     ?.charAt(0)
                                     ?.toUpperCase() || "U"}
                             </div>
+
                         )}
+
                     </div>
 
                     {/* NAME + USERNAME */}
 
                     <div className="min-w-0 pb-1">
+
                         <div className="flex flex-wrap items-center gap-2">
 
                             <h1
@@ -99,42 +112,121 @@ const UserProfile = ({
                         <p className="text-sm text-gray-500">
                             @{user.username || "username"}
                         </p>
+
                     </div>
+
                 </div>
 
                 {/* ======================================================
-                    ACTION
+                    ACTION BUTTONS
                 ====================================================== */}
 
-                {!profileID && (
-                    <button
-                        type="button"
-                        onClick={() => setshowedit(true)}
-                        className="
-                            flex
-                            shrink-0
-                            cursor-pointer
-                            items-center
-                            justify-center
-                            gap-2
-                            rounded-xl
-                            bg-[#17383A]
-                            px-4
-                            py-2
-                            text-sm
-                            font-medium
-                            text-white
-                            transition-all
-                            duration-200
-                            hover:-translate-y-0.5
-                            hover:bg-[#285557]
-                            active:scale-95
-                        "
-                    >
-                        <Edit size={16} />
-                        Edit Profile
-                    </button>
-                )}
+                <div className="flex shrink-0 gap-2">
+
+                    {/* OWN PROFILE */}
+
+                    {isOwnProfile && (
+
+                        <button
+                            type="button"
+                            onClick={() => setshowedit(true)}
+                            className="
+                                flex
+                                cursor-pointer
+                                items-center
+                                justify-center
+                                gap-2
+                                rounded-xl
+                                bg-[#17383A]
+                                px-4
+                                py-2
+                                text-sm
+                                font-medium
+                                text-white
+                                transition-all
+                                duration-200
+                                hover:-translate-y-0.5
+                                hover:bg-[#285557]
+                                active:scale-95
+                            "
+                        >
+                            <Edit size={16} />
+                            Edit Profile
+                        </button>
+
+                    )}
+
+                    {/* OTHER USER PROFILE */}
+
+                    {!isOwnProfile && (
+
+                        <>
+                            {/* FOLLOW */}
+
+                            <button
+                                type="button"
+                                className="
+                                    flex
+                                    cursor-pointer
+                                    items-center
+                                    justify-center
+                                    gap-2
+                                    rounded-xl
+                                    bg-[#17383A]
+                                    px-4
+                                    py-2
+                                    text-sm
+                                    font-medium
+                                    text-white
+                                    transition-all
+                                    duration-200
+                                    hover:-translate-y-0.5
+                                    hover:bg-[#285557]
+                                    active:scale-95
+                                "
+                            >
+                                <UserPlus size={16} />
+                                Follow
+                            </button>
+
+                            {/* MESSAGE */}
+
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    navigate(`/message/${user._id}`)
+                                }
+                                className="
+                                    flex
+                                    cursor-pointer
+                                    items-center
+                                    justify-center
+                                    gap-2
+                                    rounded-xl
+                                    border
+                                    border-[#D8E9E6]
+                                    bg-white
+                                    px-4
+                                    py-2
+                                    text-sm
+                                    font-medium
+                                    text-[#17383A]
+                                    transition-all
+                                    duration-200
+                                    hover:-translate-y-0.5
+                                    hover:bg-[#E8F5F3]
+                                    active:scale-95
+                                "
+                            >
+                                <MessageCircle size={16} />
+                                Message
+                            </button>
+                        </>
+
+                    )}
+
+                </div>
+
             </div>
 
             {/* ======================================================
@@ -142,7 +234,9 @@ const UserProfile = ({
             ====================================================== */}
 
             {user.bio && (
+
                 <div className="mt-5">
+
                     <p
                         className="
                             max-w-2xl
@@ -153,7 +247,9 @@ const UserProfile = ({
                     >
                         {user.bio}
                     </p>
+
                 </div>
+
             )}
 
             {/* ======================================================
@@ -173,6 +269,7 @@ const UserProfile = ({
                 {/* WORK */}
 
                 {user.work && (
+
                     <div
                         className="
                             flex
@@ -189,11 +286,13 @@ const UserProfile = ({
 
                         <span>{user.work}</span>
                     </div>
+
                 )}
 
                 {/* WORKPLACE */}
 
                 {user.workplace && (
+
                     <div
                         className="
                             flex
@@ -210,11 +309,13 @@ const UserProfile = ({
 
                         <span>{user.workplace}</span>
                     </div>
+
                 )}
 
                 {/* LOCATION */}
 
                 {user.location && (
+
                     <div
                         className="
                             flex
@@ -231,11 +332,13 @@ const UserProfile = ({
 
                         <span>{user.location}</span>
                     </div>
+
                 )}
 
                 {/* WEBSITE */}
 
                 {user.website && (
+
                     <a
                         href={user.website}
                         target="_blank"
@@ -253,7 +356,9 @@ const UserProfile = ({
                         <LinkIcon size={16} />
                         <span>Website</span>
                     </a>
+
                 )}
+
             </div>
 
             {/* ======================================================
@@ -261,7 +366,9 @@ const UserProfile = ({
             ====================================================== */}
 
             {user.hobbies?.length > 0 && (
+
                 <div className="mt-5">
+
                     <p
                         className="
                             mb-2
@@ -274,7 +381,9 @@ const UserProfile = ({
                     </p>
 
                     <div className="flex flex-wrap gap-2">
+
                         {user.hobbies.map((hobby, index) => (
+
                             <span
                                 key={`${hobby}-${index}`}
                                 className="
@@ -289,9 +398,13 @@ const UserProfile = ({
                             >
                                 {hobby}
                             </span>
+
                         ))}
+
                     </div>
+
                 </div>
+
             )}
 
             {/* ======================================================
@@ -313,6 +426,7 @@ const UserProfile = ({
                 {/* POSTS */}
 
                 <div className="text-center">
+
                     <p
                         className="
                             text-lg
@@ -326,11 +440,13 @@ const UserProfile = ({
                     <p className="text-xs text-gray-400">
                         Posts
                     </p>
+
                 </div>
 
                 {/* FOLLOWERS */}
 
                 <div className="text-center">
+
                     <p
                         className="
                             text-lg
@@ -344,11 +460,13 @@ const UserProfile = ({
                     <p className="text-xs text-gray-400">
                         Followers
                     </p>
+
                 </div>
 
                 {/* FOLLOWING */}
 
                 <div className="text-center">
+
                     <p
                         className="
                             text-lg
@@ -362,8 +480,11 @@ const UserProfile = ({
                     <p className="text-xs text-gray-400">
                         Following
                     </p>
+
                 </div>
+
             </div>
+
         </div>
     );
 };

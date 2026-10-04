@@ -13,6 +13,6 @@ userRouter.post('/connect', protect,  sendConnectionRequest);
 userRouter.get('/connections', protect, getUserConnections);
 userRouter.post('/accept', protect, acceptConnectionRequest);
 userRouter.get('/profile', getUserProfiles);
+userRouter.get("/profile/:profileId",getUserProfiles);
 userRouter.get('/recent-messages', protect, getRecentChats);
-
 export { userRouter };

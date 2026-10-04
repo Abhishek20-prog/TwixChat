@@ -105,161 +105,285 @@ export const getUser = async (req, res) => {
 
 
 // ======================================================
-// UPDATE USER
+// UPDATE CURRENT USER
+// ======================================================
+
+// ======================================================
+// UPDATE CURRENT USER
 // ======================================================
 
 export const updateUser = async (req, res) => {
     try {
-        const { authenticated, user } = await getCurrentUser(req);
+        // ======================================================
+        // GET CURRENT USER
+        // ======================================================
 
-        // Check authentication
+        const { authenticated, user } =
+            await getCurrentUser(req);
+
         if (!authenticated) {
             return res.status(401).json({
                 success: false,
-                message: "Unauthorized"
+                message: "Unauthorized",
             });
         }
 
-        // Check MongoDB user
         if (!user) {
             return res.status(404).json({
                 success: false,
-                message: "User not found in database"
+                message: "User not found in database",
             });
         }
+
+        // ======================================================
+        // GET FORM DATA
+        // ======================================================
 
         const {
             username,
             bio,
             location,
-            full_name
+            full_name,
+            remove_profile_picture,
+            remove_cover_photo,
         } = req.body;
 
+        // ======================================================
+        // CHECK USERNAME
+        // ======================================================
 
-        // ==================================================
-        // USERNAME
-        // ==================================================
-
-        const newUsername = username || user.username;
+        const newUsername =
+            username?.trim() || user.username;
 
         if (newUsername !== user.username) {
             const existingUser = await User.findOne({
                 username: newUsername,
-                _id: { $ne: user._id }
+                _id: { $ne: user._id },
             });
 
             if (existingUser) {
                 return res.status(409).json({
                     success: false,
-                    message: "Username already exists"
+                    message: "Username already exists",
                 });
             }
         }
 
-
-        // ==================================================
-        // UPDATE DATA
-        // ==================================================
+        // ======================================================
+        // DATA TO UPDATE
+        // ======================================================
 
         const updatedData = {
             username: newUsername,
-            bio: bio !== undefined
-                ? bio
-                : user.bio,
 
-            full_name: full_name !== undefined
-                ? full_name
-                : user.full_name,
+            full_name:
+                full_name !== undefined
+                    ? full_name.trim()
+                    : user.full_name,
 
-            location: location !== undefined
-                ? location
-                : user.location
+            bio:
+                bio !== undefined
+                    ? bio.trim()
+                    : user.bio,
+
+            location:
+                location !== undefined
+                    ? location.trim()
+                    : user.location,
         };
 
+        // ======================================================
+        // REMOVE PROFILE PICTURE
+        // ======================================================
 
-        // ==================================================
-        // COVER IMAGE
-        // ==================================================
-
-        const cover = req.files?.cover?.[0];
-
-        if (cover) {
-            const buffer = fs.readFileSync(cover.path);
-
-            const response = await imagekit.files.upload({
-                file: buffer,
-                fileName: cover.originalname
-            });
-
-            const url = imagekit.helper.buildSrc({
-                urlEndpoint: process.env.IMAGEKIT_URL_ENDPOINT,
-                src: response.filePath,
-                transformation: [
-                    { quality: "auto" },
-                    { format: "webp" },
-                    { width: 1280 }
-                ]
-            });
-
-            updatedData.cover_photo = url;
+        if (remove_profile_picture === "true") {
+            updatedData.profile_picture = "";
         }
 
+        // ======================================================
+        // REMOVE COVER PHOTO
+        // ======================================================
 
-        // ==================================================
-        // PROFILE IMAGE
-        // ==================================================
+        if (remove_cover_photo === "true") {
+            updatedData.cover_photo = "";
+        }
 
-        const profile = req.files?.profile?.[0];
+        // ======================================================
+        // CHECK UPLOADED FILES
+        // ======================================================
+
+        const profile =
+            req.files?.profile?.[0];
+
+        const cover =
+            req.files?.cover?.[0];
+
+        console.log(
+            "UPDATE USER FILES:",
+            req.files
+        );
+
+        // ======================================================
+        // PROFILE PICTURE UPLOAD
+        // ======================================================
 
         if (profile) {
-            const buffer = fs.readFileSync(profile.path);
+            console.log(
+                "PROFILE FILE:",
+                profile.path
+            );
 
-            const response = await imagekit.files.upload({
-                file: buffer,
-                fileName: profile.originalname
-            });
+            const response =
+                await imagekit.files.upload({
+                    file: fs.createReadStream(
+                        profile.path
+                    ),
 
-            const url = imagekit.helper.buildSrc({
-                urlEndpoint: process.env.IMAGEKIT_URL_ENDPOINT,
-                src: response.filePath,
-                transformation: [
-                    { quality: "auto" },
-                    { format: "webp" },
-                    { width: 512 }
-                ]
-            });
+                    fileName:
+                        `${Date.now()}-${profile.originalname}`,
+
+                    folder: "profiles",
+                });
+
+            console.log(
+                "PROFILE IMAGEKIT RESPONSE:",
+                response
+            );
+
+            if (!response?.filePath) {
+                return res.status(500).json({
+                    success: false,
+                    message:
+                        "Profile image upload failed",
+                });
+            }
+
+            const url =
+                imagekit.helper.buildSrc({
+                    urlEndpoint:
+                        process.env
+                            .IMAGEKIT_URL_ENDPOINT,
+
+                    src: response.filePath,
+
+                    transformation: [
+                        {
+                            quality: "auto",
+                        },
+                        {
+                            format: "webp",
+                        },
+                        {
+                            width: 512,
+                        },
+                    ],
+                });
 
             updatedData.profile_picture = url;
         }
 
+        // ======================================================
+        // COVER PHOTO UPLOAD
+        // ======================================================
 
-        // ==================================================
-        // UPDATE DATABASE
-        // ==================================================
+        if (cover) {
+            console.log(
+                "COVER FILE:",
+                cover.path
+            );
 
-        const updatedUser = await User.findByIdAndUpdate(
-            user._id,
-            {
-                $set: updatedData
-            },
-            {
-                new: true,
-                runValidators: true
+            const response =
+                await imagekit.files.upload({
+                    file: fs.createReadStream(
+                        cover.path
+                    ),
+
+                    fileName:
+                        `${Date.now()}-${cover.originalname}`,
+
+                    folder: "covers",
+                });
+
+            console.log(
+                "COVER IMAGEKIT RESPONSE:",
+                response
+            );
+
+            if (!response?.filePath) {
+                return res.status(500).json({
+                    success: false,
+                    message:
+                        "Cover image upload failed",
+                });
             }
-        );
+
+            const url =
+                imagekit.helper.buildSrc({
+                    urlEndpoint:
+                        process.env
+                            .IMAGEKIT_URL_ENDPOINT,
+
+                    src: response.filePath,
+
+                    transformation: [
+                        {
+                            quality: "auto",
+                        },
+                        {
+                            format: "webp",
+                        },
+                        {
+                            width: 1280,
+                        },
+                    ],
+                });
+
+            updatedData.cover_photo = url;
+        }
+
+        // ======================================================
+        // UPDATE MONGODB
+        // ======================================================
+
+        const updatedUser =
+            await User.findByIdAndUpdate(
+                user._id,
+                {
+                    $set: updatedData,
+                },
+                {
+                    new: true,
+                    runValidators: true,
+                }
+            );
+
+        if (!updatedUser) {
+            return res.status(404).json({
+                success: false,
+                message: "Failed to update user",
+            });
+        }
+
+        // ======================================================
+        // SUCCESS
+        // ======================================================
 
         return res.status(200).json({
             success: true,
+            message: "Profile updated successfully",
             user: updatedUser,
-            message: "Profile updated successfully"
         });
-
     } catch (error) {
-        console.error("updateUser error:", error);
+        console.error(
+            "UPDATE USER ERROR:",
+            error
+        );
 
         return res.status(500).json({
             success: false,
-            message: error.message
+            message:
+                error?.message ||
+                "Internal server error",
         });
     }
 };

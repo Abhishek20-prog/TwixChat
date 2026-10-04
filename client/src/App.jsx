@@ -42,17 +42,14 @@ useEffect(() => {
             dispatch(fetchRecentMessages(token));
             dispatch(fetchConnections(token));
         } catch (error) {
-            console.error(
-                "INITIAL DATA ERROR:",
-                error
-            );
+            console.error("INITIAL DATA ERROR:", error);
         }
     };
 
-    if (isLoaded) {
+    if (isLoaded && user) {
         fetchInitialData();
     }
-}, [user, isLoaded, getToken, dispatch]);
+}, [isLoaded, user, getToken, dispatch]);
 
     // ======================================================
     // CLERK LOADING
