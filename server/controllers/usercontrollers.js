@@ -392,83 +392,95 @@ export const updateUser = async (req, res) => {
 // ======================================================
 // DISCOVER USERS
 // ======================================================
-
 export const discoveruser = async (req, res) => {
     try {
         const { authenticated, user } = await getCurrentUser(req);
 
-        // Check authentication
         if (!authenticated) {
             return res.status(401).json({
                 success: false,
-                message: "Unauthorized"
+                message: "Unauthorized",
             });
         }
 
-        // Check current user
         if (!user) {
             return res.status(404).json({
                 success: false,
-                message: "User not found in database"
+                message: "User not found in database",
             });
         }
 
         const { input = "" } = req.body;
 
-        // Escape regex special characters
         const escapedInput = input.replace(
             /[.*+?^${}()|[\]\\]/g,
             "\\$&"
         );
 
-        const users = await User.find({
-            // Don't show current user
-            _id: {
-                $ne: user._id
-            },
+        const followingIds = new Set(
+            (user.following || []).map((id) =>
+                id.toString()
+            )
+        );
 
+        const users = await User.find({
+            _id: {
+                $ne: user._id,
+            },
             $or: [
                 {
                     username: new RegExp(
                         escapedInput,
                         "i"
-                    )
+                    ),
                 },
                 {
                     email: new RegExp(
                         escapedInput,
                         "i"
-                    )
+                    ),
                 },
                 {
                     full_name: new RegExp(
                         escapedInput,
                         "i"
-                    )
+                    ),
                 },
                 {
                     location: new RegExp(
                         escapedInput,
                         "i"
-                    )
-                }
-            ]
-        });
+                    ),
+                },
+            ],
+        }).lean();
+
+        const usersWithFollowStatus = users.map(
+            (targetUser) => ({
+                ...targetUser,
+
+                isFollowing: followingIds.has(
+                    targetUser._id.toString()
+                ),
+            })
+        );
 
         return res.status(200).json({
             success: true,
-            users
+            users: usersWithFollowStatus,
         });
-
     } catch (error) {
         console.error("discoveruser error:", error);
 
         return res.status(500).json({
             success: false,
-            message: error.message
+            message:
+                error.message ||
+                "Internal server error",
         });
     }
 };
+
 
 
 // ======================================================

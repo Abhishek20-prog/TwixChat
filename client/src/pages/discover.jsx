@@ -1,4 +1,3 @@
-
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Search, UserPlus } from "lucide-react";
@@ -10,7 +9,7 @@ import {
     unfollowUser,
 } from "../features/connections/connectionslice";
 
-const discover = () => {
+const Discover = () => {
     const [search, setSearch] = useState("");
     const [followingId, setFollowingId] = useState(null);
     const [randomUsers, setRandomUsers] = useState([]);
@@ -20,10 +19,6 @@ const discover = () => {
 
     const users = useSelector(
         (state) => state.connection.discoverUsers || []
-    );
-
-    const following = useSelector(
-        (state) => state.connection.following || []
     );
 
     useEffect(() => {
@@ -93,21 +88,11 @@ const discover = () => {
         return randomUsers;
     }, [users, randomUsers, search]);
 
-    const isUserFollowing = (userId) => {
-        return following.some((item) => {
-            const followingId =
-                typeof item === "object"
-                    ? item._id || item.id
-                    : item;
-
-            return (
-                followingId?.toString() ===
-                userId?.toString()
-            );
-        });
-    };
-
-    const handleFollow = async (e, userId) => {
+    const handleFollow = async (
+        e,
+        userId,
+        isFollowing
+    ) => {
         e.preventDefault();
         e.stopPropagation();
 
@@ -120,21 +105,13 @@ const discover = () => {
 
             if (!token) return;
 
-            const alreadyFollowing =
-                isUserFollowing(userId);
-
-            if (alreadyFollowing) {
+            if (isFollowing) {
                 await dispatch(
                     unfollowUser({
                         token,
                         id: userId,
                     })
                 ).unwrap();
-
-                dispatch({
-                    type: "connection/removeFollowing",
-                    payload: userId,
-                });
             } else {
                 await dispatch(
                     followUser({
@@ -142,12 +119,14 @@ const discover = () => {
                         id: userId,
                     })
                 ).unwrap();
-
-                dispatch({
-                    type: "connection/addFollowing",
-                    payload: userId,
-                });
             }
+
+            await dispatch(
+                fetchDiscoverUsers({
+                    token,
+                    input: "",
+                })
+            ).unwrap();
         } catch (error) {
             console.error(
                 "Failed to update follow status:",
@@ -234,7 +213,7 @@ const discover = () => {
                                 user.id || user._id;
 
                             const followingUser =
-                                isUserFollowing(userId);
+                                user.isFollowing === true;
 
                             return (
                                 <Link
@@ -385,7 +364,8 @@ const discover = () => {
                                             onClick={(e) =>
                                                 handleFollow(
                                                     e,
-                                                    userId
+                                                    userId,
+                                                    followingUser
                                                 )
                                             }
                                             className="
@@ -458,5 +438,4 @@ const discover = () => {
     );
 };
 
-export default discover;
-
+export default Discover;
