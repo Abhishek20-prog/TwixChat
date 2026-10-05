@@ -11,7 +11,6 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { useAuth } from "@clerk/react";
-
 import {
     fetchConnections,
     followUser,
@@ -94,6 +93,9 @@ const Connections = () => {
     };
 
     const connections = useMemo(() => {
+      console.log("FOLLOWERS:", followers);
+console.log("FOLLOWING:", following);
+console.log("MY CONNECTIONS:", reduxConnections);
         const result = [];
 
         followers.forEach((user) => {
@@ -119,7 +121,8 @@ const Connections = () => {
                     username: user.username,
                     dp: user.profile_picture,
                 },
-                mutualConnections: 0,
+                mutualConnections:
+                    user.mutualConnections || 0,
             });
         });
 
@@ -149,7 +152,8 @@ const Connections = () => {
                         userData?.profile_picture ||
                         "",
                 },
-                mutualConnections: 0,
+                mutualConnections:
+                    userData?.mutualConnections || 0,
             });
         });
 
@@ -163,7 +167,8 @@ const Connections = () => {
                     username: user.username,
                     dp: user.profile_picture,
                 },
-                mutualConnections: 0,
+                mutualConnections:
+                    user.mutualConnections || 0,
             });
         });
 
@@ -177,7 +182,8 @@ const Connections = () => {
                     username: user.username,
                     dp: user.profile_picture,
                 },
-                mutualConnections: 0,
+                mutualConnections:
+                    user.mutualConnections || 0,
             });
         });
 
@@ -410,7 +416,6 @@ const Connections = () => {
     return (
         <div className="min-h-screen bg-[#EEEAF6] px-6 py-8">
             <div className="max-w-4xl mx-auto">
-
                 <div className="mb-6">
                     <h1 className="text-3xl font-bold text-[#17383A]">
                         Connections

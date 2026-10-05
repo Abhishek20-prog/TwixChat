@@ -841,19 +841,20 @@ export const sendConnectionRequest = async (req, res) => {
 
 export const getUserConnections = async (req, res) => {
     try {
-        const { authenticated, user } = await getCurrentUser(req);
+        const { authenticated, user } =
+            await getCurrentUser(req);
 
         if (!authenticated) {
             return res.status(401).json({
                 success: false,
-                message: "Unauthorized"
+                message: "Unauthorized",
             });
         }
 
         if (!user) {
             return res.status(404).json({
                 success: false,
-                message: "User not found"
+                message: "User not found",
             });
         }
 
@@ -866,7 +867,7 @@ export const getUserConnections = async (req, res) => {
             await connectionModel
                 .find({
                     to_user_Id: user._id,
-                    status: "pending"
+                    status: "pending",
                 })
                 .populate("from_user_Id");
 
@@ -874,18 +875,75 @@ export const getUserConnections = async (req, res) => {
             (connection) => connection.from_user_Id
         );
 
+        // ======================================================
+        // CURRENT USER'S FOLLOWING IDS
+        // ======================================================
+
+        const myFollowingIds = new Set(
+            (currentUser?.following || []).map((person) =>
+                person._id.toString()
+            )
+        );
+
+        // ======================================================
+        // CALCULATE MUTUAL FOLLOWING
+        // ======================================================
+
+        const addMutualConnections = (users) => {
+            return users.map((targetUser) => {
+                const targetFollowingIds = new Set(
+                    (targetUser.following || []).map((person) =>
+                        person._id.toString()
+                    )
+                );
+
+                let mutualCount = 0;
+
+                myFollowingIds.forEach((id) => {
+                    if (targetFollowingIds.has(id)) {
+                        mutualCount++;
+                    }
+                });
+
+                return {
+                    ...targetUser.toObject(),
+                    mutualConnections: mutualCount,
+                };
+            });
+        };
+
+        // ======================================================
+        // ADD MUTUAL COUNT
+        // ======================================================
+
+        const followers = addMutualConnections(
+            currentUser?.followers || []
+        );
+
+        const following = addMutualConnections(
+            currentUser?.following || []
+        );
+
+        const connections = addMutualConnections(
+            currentUser?.connections || []
+        );
+
+        const pendingWithMutuals =
+            addMutualConnections(pendingUsers);
+
+        // ======================================================
+        // RESPONSE
+        // ======================================================
+
         return res.status(200).json({
             success: true,
             data: {
-                connections:
-                    currentUser?.connections || [],
-                followers:
-                    currentUser?.followers || [],
-                following:
-                    currentUser?.following || [],
+                connections,
+                followers,
+                following,
                 pendingConnections:
-                    pendingUsers
-            }
+                    pendingWithMutuals,
+            },
         });
     } catch (error) {
         console.error(
@@ -895,11 +953,10 @@ export const getUserConnections = async (req, res) => {
 
         return res.status(500).json({
             success: false,
-            message: "Internal server error"
+            message: "Internal server error",
         });
     }
 };
-
 // ======================================================
 // ACCEPT CONNECTION REQUEST
 // ======================================================
