@@ -11,14 +11,22 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { useAuth } from "@clerk/react";
-import { fetchConnections } from "../features/connections/connectionslice";
+
+import {
+    fetchConnections,
+    followUser,
+    unfollowUser,
+    addFollowing,
+    removeFollowing,
+} from "../features/connections/connectionslice";
 
 const Connections = () => {
     const navigate = useNavigate();
     const dispatch = useDispatch();
     const { getToken } = useAuth();
 
-    const [activeCategory, setActiveCategory] = useState("follower");
+    const [activeCategory, setActiveCategory] =
+        useState("follower");
 
     const {
         connections: reduxConnections,
@@ -35,22 +43,76 @@ const Connections = () => {
 
                 if (!token) return;
 
-                await dispatch(fetchConnections(token)).unwrap();
+                await dispatch(
+                    fetchConnections(token)
+                ).unwrap();
             } catch (error) {
-                console.error("Failed to load connections:", error);
+                console.error(
+                    "Failed to load connections:",
+                    error
+                );
             }
         };
 
         loadConnections();
     }, [dispatch, getToken]);
 
+    const handleFollowToggle = async (
+        userId,
+        isFollowing
+    ) => {
+        try {
+            const token = await getToken();
+
+            if (!token) return;
+
+            if (isFollowing) {
+                await dispatch(
+                    unfollowUser({
+                        token,
+                        id: userId,
+                    })
+                ).unwrap();
+
+                dispatch(removeFollowing(userId));
+            } else {
+                await dispatch(
+                    followUser({
+                        token,
+                        id: userId,
+                    })
+                ).unwrap();
+
+                dispatch(addFollowing(userId));
+            }
+        } catch (error) {
+            console.error(
+                "Follow/unfollow failed:",
+                error
+            );
+        }
+    };
+
     const connections = useMemo(() => {
         const result = [];
 
         followers.forEach((user) => {
+            const isFollowing = following.some((item) => {
+                const followingId =
+                    typeof item === "object"
+                        ? item._id || item.id
+                        : item;
+
+                return (
+                    followingId?.toString() ===
+                    user._id?.toString()
+                );
+            });
+
             result.push({
                 id: user._id,
                 type: "follower",
+                isFollowing,
                 user: {
                     id: user._id,
                     name: user.full_name,
@@ -63,7 +125,9 @@ const Connections = () => {
 
         following.forEach((user) => {
             const userId =
-                typeof user === "object" ? user._id : user;
+                typeof user === "object"
+                    ? user._id
+                    : user;
 
             const userData =
                 typeof user === "object"
@@ -73,11 +137,17 @@ const Connections = () => {
             result.push({
                 id: userId,
                 type: "following",
+                isFollowing: true,
                 user: {
                     id: userId,
-                    name: userData?.full_name || "User",
-                    username: userData?.username || "",
-                    dp: userData?.profile_picture || "",
+                    name:
+                        userData?.full_name ||
+                        "User",
+                    username:
+                        userData?.username || "",
+                    dp:
+                        userData?.profile_picture ||
+                        "",
                 },
                 mutualConnections: 0,
             });
@@ -120,19 +190,23 @@ const Connections = () => {
     ]);
 
     const followersCount = connections.filter(
-        (connection) => connection.type === "follower"
+        (connection) =>
+            connection.type === "follower"
     ).length;
 
     const followingCount = connections.filter(
-        (connection) => connection.type === "following"
+        (connection) =>
+            connection.type === "following"
     ).length;
 
     const pendingCount = connections.filter(
-        (connection) => connection.type === "pending"
+        (connection) =>
+            connection.type === "pending"
     ).length;
 
     const connectedCount = connections.filter(
-        (connection) => connection.type === "connected"
+        (connection) =>
+            connection.type === "connected"
     ).length;
 
     const categories = [
@@ -182,12 +256,15 @@ const Connections = () => {
         },
     ];
 
-    const filteredConnections = connections.filter(
-        (connection) => connection.type === activeCategory
-    );
+    const filteredConnections =
+        connections.filter(
+            (connection) =>
+                connection.type === activeCategory
+        );
 
     const activeCategoryData = categories.find(
-        (category) => category.id === activeCategory
+        (category) =>
+            category.id === activeCategory
     );
 
     const renderAction = (connection) => {
@@ -196,22 +273,39 @@ const Connections = () => {
                 return (
                     <button
                         type="button"
-                        className="
+                        onClick={() =>
+                            handleFollowToggle(
+                                connection.user.id,
+                                connection.isFollowing
+                            )
+                        }
+                        className={`
                             flex items-center gap-2
                             px-4 py-2
                             rounded-xl
-                            bg-[#17383A]
-                            text-white
                             text-xs font-medium
-                            hover:bg-[#285557]
                             hover:scale-105
                             active:scale-95
                             transition-all duration-200
                             cursor-pointer
-                        "
+                            ${
+                                connection.isFollowing
+                                    ? "bg-[#E7F0F6] text-[#3B718E] hover:bg-[#D4E5EF]"
+                                    : "bg-[#17383A] text-white hover:bg-[#285557]"
+                            }
+                        `}
                     >
-                        <UserPlus size={14} />
-                        Follow Back
+                        {connection.isFollowing ? (
+                            <>
+                                <UserCheck size={14} />
+                                Unfollow
+                            </>
+                        ) : (
+                            <>
+                                <UserPlus size={14} />
+                                Follow Back
+                            </>
+                        )}
                     </button>
                 );
 
@@ -219,6 +313,12 @@ const Connections = () => {
                 return (
                     <button
                         type="button"
+                        onClick={() =>
+                            handleFollowToggle(
+                                connection.user.id,
+                                true
+                            )
+                        }
                         className="
                             flex items-center gap-2
                             px-4 py-2
@@ -232,7 +332,7 @@ const Connections = () => {
                         "
                     >
                         <UserCheck size={14} />
-                        Following
+                        Unfollow
                     </button>
                 );
 
@@ -310,6 +410,7 @@ const Connections = () => {
     return (
         <div className="min-h-screen bg-[#EEEAF6] px-6 py-8">
             <div className="max-w-4xl mx-auto">
+
                 <div className="mb-6">
                     <h1 className="text-3xl font-bold text-[#17383A]">
                         Connections
@@ -323,15 +424,19 @@ const Connections = () => {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {categories.map((category) => {
                         const Icon = category.icon;
+
                         const isActive =
-                            activeCategory === category.id;
+                            activeCategory ===
+                            category.id;
 
                         return (
                             <button
                                 key={category.id}
                                 type="button"
                                 onClick={() =>
-                                    setActiveCategory(category.id)
+                                    setActiveCategory(
+                                        category.id
+                                    )
                                 }
                                 className={`
                                     group
@@ -402,95 +507,114 @@ const Connections = () => {
                         </div>
                     ) : (
                         <div className="space-y-3">
-                            {filteredConnections.map((connection) => (
-                                <div
-                                    key={`${connection.type}-${connection.id}`}
-                                    className="
-                                        group
-                                        flex
-                                        items-center
-                                        justify-between
-                                        gap-4
-                                        p-4
-                                        rounded-[22px]
-                                        bg-white/80
-                                        border
-                                        border-[#DCE9E7]
-                                        shadow-sm
-                                        transition-all
-                                        duration-200
-                                        hover:-translate-y-[2px]
-                                        hover:shadow-md
-                                        hover:border-[#BFD5D2]
-                                    "
-                                >
-                                    <div className="flex items-center gap-4 min-w-0 hover:cursor-pointer">
-                                        <img
-                                            onClick={() =>
-                                                navigate(
-                                                    `/profile/${connection.user.id}`
-                                                )
-                                            }
-                                            src={
-                                                connection.user.dp ||
-                                                "https://via.placeholder.com/100"
-                                            }
-                                            alt={connection.user.name}
-                                            className="
-                                                w-12 h-12
-                                                rounded-full
-                                                object-cover
-                                                ring-2 ring-white
-                                                transition-transform
-                                                duration-200
-                                                group-hover:scale-105
-                                                cursor-pointer
-                                            "
-                                        />
-
-                                        <div className="min-w-0">
-                                            <h3
+                            {filteredConnections.map(
+                                (connection) => (
+                                    <div
+                                        key={`${connection.type}-${connection.id}`}
+                                        className="
+                                            group
+                                            flex
+                                            items-center
+                                            justify-between
+                                            gap-4
+                                            p-4
+                                            rounded-[22px]
+                                            bg-white/80
+                                            border
+                                            border-[#DCE9E7]
+                                            shadow-sm
+                                            transition-all
+                                            duration-200
+                                            hover:-translate-y-[2px]
+                                            hover:shadow-md
+                                            hover:border-[#BFD5D2]
+                                        "
+                                    >
+                                        <div className="flex items-center gap-4 min-w-0 hover:cursor-pointer">
+                                            <img
                                                 onClick={() =>
                                                     navigate(
                                                         `/profile/${connection.user.id}`
                                                     )
+                                                }
+                                                src={
+                                                    connection
+                                                        .user
+                                                        .dp
+                                                }
+                                                alt={
+                                                    connection
+                                                        .user
+                                                        .name
                                                 }
                                                 className="
-                                                    text-sm
-                                                    font-semibold
-                                                    text-[#17383A]
-                                                    truncate
-                                                    group-hover:text-[#285557]
-                                                    transition-colors
+                                                    w-12 h-12
+                                                    rounded-full
+                                                    object-cover
+                                                    ring-2 ring-white
+                                                    transition-transform
+                                                    duration-200
+                                                    group-hover:scale-105
                                                     cursor-pointer
                                                 "
-                                            >
-                                                {connection.user.name}
-                                            </h3>
+                                            />
 
-                                            <p
-                                                className="text-xs text-gray-400 truncate cursor-pointer"
-                                                onClick={() =>
-                                                    navigate(
-                                                        `/profile/${connection.user.id}`
-                                                    )
-                                                }
-                                            >
-                                                {connection.user.username}
-                                            </p>
+                                            <div className="min-w-0">
+                                                <h3
+                                                    onClick={() =>
+                                                        navigate(
+                                                            `/profile/${connection.user.id}`
+                                                        )
+                                                    }
+                                                    className="
+                                                        text-sm
+                                                        font-semibold
+                                                        text-[#17383A]
+                                                        truncate
+                                                        group-hover:text-[#285557]
+                                                        transition-colors
+                                                        cursor-pointer
+                                                    "
+                                                >
+                                                    {
+                                                        connection
+                                                            .user
+                                                            .name
+                                                    }
+                                                </h3>
 
-                                            <p className="text-[11px] text-gray-400 mt-1">
-                                                {connection.mutualConnections}{" "}
-                                                mutual connections
-                                            </p>
+                                                <p
+                                                    className="text-xs text-gray-400 truncate cursor-pointer"
+                                                    onClick={() =>
+                                                        navigate(
+                                                            `/profile/${connection.user.id}`
+                                                        )
+                                                    }
+                                                >
+                                                    {
+                                                        connection
+                                                            .user
+                                                            .username
+                                                    }
+                                                </p>
+
+                                                <p className="text-[11px] text-gray-400 mt-1">
+                                                    {
+                                                        connection.mutualConnections
+                                                    }{" "}
+                                                    mutual connections
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div className="shrink-0">
+                                            {renderAction(
+                                                connection
+                                            )}
                                         </div>
                                     </div>
-
-                                    <div className="shrink-0">
-                                        {renderAction(connection)}
-                                    </div>
-                                </div>
-                            ))}
+                                )
+                            )}
                         </div>
                     )}
 
