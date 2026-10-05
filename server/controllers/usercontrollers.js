@@ -857,14 +857,11 @@ export const getUserConnections = async (req, res) => {
             });
         }
 
+        const currentUser = await User.findById(user._id)
+            .populate("connections")
+            .populate("followers")
+            .populate("following");
 
-        // Get accepted connections
-        const connections =
-            await User.findById(user._id)
-                .populate("connections");
-
-
-        // Get pending requests
         const pendingConnections =
             await connectionModel
                 .find({
@@ -873,32 +870,23 @@ export const getUserConnections = async (req, res) => {
                 })
                 .populate("from_user_Id");
 
-
-        // Extract users who sent requests
-        const pendingUsers =
-            pendingConnections.map(
-                connection =>
-                    connection.from_user_Id
-            );
-
+        const pendingUsers = pendingConnections.map(
+            (connection) => connection.from_user_Id
+        );
 
         return res.status(200).json({
             success: true,
             data: {
                 connections:
-                    connections?.connections || [],
-
+                    currentUser?.connections || [],
                 followers:
-                    user.followers || [],
-
+                    currentUser?.followers || [],
                 following:
-                    user.following || [],
-
+                    currentUser?.following || [],
                 pendingConnections:
                     pendingUsers
             }
         });
-
     } catch (error) {
         console.error(
             "getUserConnections error:",
@@ -911,7 +899,6 @@ export const getUserConnections = async (req, res) => {
         });
     }
 };
-
 
 // ======================================================
 // ACCEPT CONNECTION REQUEST
