@@ -1,5 +1,5 @@
-import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 
+import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import api from "../../api/axios.js";
 
 const initialState = {
@@ -7,6 +7,7 @@ const initialState = {
     requests: [],
     followers: [],
     following: [],
+    discoverUsers: [],
     loading: false,
     error: null,
 };
@@ -32,7 +33,35 @@ export const fetchConnections = createAsyncThunk(
         } catch (error) {
             return rejectWithValue(
                 error.response?.data?.message ||
-                "Failed to fetch connections"
+                    "Failed to fetch connections"
+            );
+        }
+    }
+);
+
+// ======================================================
+// FETCH DISCOVER USERS
+// ======================================================
+
+export const fetchDiscoverUsers = createAsyncThunk(
+    "connection/fetchDiscoverUsers",
+    async ({ token, input = "" }, { rejectWithValue }) => {
+        try {
+            const { data } = await api.post(
+                "/api/user/discover",
+                { input },
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                }
+            );
+
+            return data;
+        } catch (error) {
+            return rejectWithValue(
+                error.response?.data?.message ||
+                    "Failed to fetch discover users"
             );
         }
     }
@@ -60,7 +89,7 @@ export const sendConnectionRequest = createAsyncThunk(
         } catch (error) {
             return rejectWithValue(
                 error.response?.data?.message ||
-                "Failed to send connection request"
+                    "Failed to send connection request"
             );
         }
     }
@@ -88,7 +117,7 @@ export const acceptConnectionRequest = createAsyncThunk(
         } catch (error) {
             return rejectWithValue(
                 error.response?.data?.message ||
-                "Failed to accept connection request"
+                    "Failed to accept connection request"
             );
         }
     }
@@ -116,7 +145,7 @@ export const followUser = createAsyncThunk(
         } catch (error) {
             return rejectWithValue(
                 error.response?.data?.message ||
-                "Failed to follow user"
+                    "Failed to follow user"
             );
         }
     }
@@ -144,7 +173,7 @@ export const unfollowUser = createAsyncThunk(
         } catch (error) {
             return rejectWithValue(
                 error.response?.data?.message ||
-                "Failed to unfollow user"
+                    "Failed to unfollow user"
             );
         }
     }
@@ -156,6 +185,7 @@ export const unfollowUser = createAsyncThunk(
 
 const connectionSlice = createSlice({
     name: "connection",
+
     initialState,
 
     reducers: {
@@ -164,125 +194,228 @@ const connectionSlice = createSlice({
             state.requests = [];
             state.followers = [];
             state.following = [];
+            state.discoverUsers = [];
             state.error = null;
+        },
+
+        addFollowing: (state, action) => {
+            const userId = action.payload;
+
+            const alreadyFollowing = state.following.some((item) => {
+                const id =
+                    typeof item === "object"
+                        ? item._id || item.id
+                        : item;
+
+                return (
+                    id?.toString() ===
+                    userId?.toString()
+                );
+            });
+
+            if (!alreadyFollowing) {
+                state.following.push(userId);
+            }
+        },
+
+        removeFollowing: (state, action) => {
+            const userId = action.payload;
+
+            state.following = state.following.filter((item) => {
+                const id =
+                    typeof item === "object"
+                        ? item._id || item.id
+                        : item;
+
+                return (
+                    id?.toString() !==
+                    userId?.toString()
+                );
+            });
         },
     },
 
     extraReducers: (builder) => {
-
         // ======================================================
         // FETCH CONNECTIONS
         // ======================================================
 
         builder
-            .addCase(fetchConnections.pending, (state) => {
-                state.loading = true;
-                state.error = null;
-            })
+            .addCase(
+                fetchConnections.pending,
+                (state) => {
+                    state.loading = true;
+                    state.error = null;
+                }
+            )
+            .addCase(
+                fetchConnections.fulfilled,
+                (state, action) => {
+                    state.loading = false;
 
-            .addCase(fetchConnections.fulfilled, (state, action) => {
-                state.loading = false;
+                    const data =
+                        action.payload.data || {};
 
-                const data = action.payload.data || {};
+                    state.connections =
+                        data.connections || [];
 
-                state.connections =
-                    data.connections || [];
+                    state.followers =
+                        data.followers || [];
 
-                state.followers =
-                    data.followers || [];
+                    state.following =
+                        data.following || [];
 
-                state.following =
-                    data.following || [];
+                    state.requests =
+                        data.pendingConnections || [];
+                }
+            )
+            .addCase(
+                fetchConnections.rejected,
+                (state, action) => {
+                    state.loading = false;
+                    state.error = action.payload;
+                }
+            );
 
-                state.requests =
-                    data.pendingConnections || [];
-            })
+        // ======================================================
+        // FETCH DISCOVER USERS
+        // ======================================================
 
-            .addCase(fetchConnections.rejected, (state, action) => {
-                state.loading = false;
-                state.error = action.payload;
-            });
+        builder
+            .addCase(
+                fetchDiscoverUsers.pending,
+                (state) => {
+                    state.loading = true;
+                    state.error = null;
+                }
+            )
+            .addCase(
+                fetchDiscoverUsers.fulfilled,
+                (state, action) => {
+                    state.loading = false;
+
+                    state.discoverUsers =
+                        action.payload.users || [];
+                }
+            )
+            .addCase(
+                fetchDiscoverUsers.rejected,
+                (state, action) => {
+                    state.loading = false;
+                    state.error = action.payload;
+                }
+            );
 
         // ======================================================
         // SEND CONNECTION REQUEST
         // ======================================================
 
         builder
-            .addCase(sendConnectionRequest.pending, (state) => {
-                state.loading = true;
-                state.error = null;
-            })
-
-            .addCase(sendConnectionRequest.fulfilled, (state) => {
-                state.loading = false;
-            })
-
-            .addCase(sendConnectionRequest.rejected, (state, action) => {
-                state.loading = false;
-                state.error = action.payload;
-            });
+            .addCase(
+                sendConnectionRequest.pending,
+                (state) => {
+                    state.loading = true;
+                    state.error = null;
+                }
+            )
+            .addCase(
+                sendConnectionRequest.fulfilled,
+                (state) => {
+                    state.loading = false;
+                }
+            )
+            .addCase(
+                sendConnectionRequest.rejected,
+                (state, action) => {
+                    state.loading = false;
+                    state.error = action.payload;
+                }
+            );
 
         // ======================================================
         // ACCEPT CONNECTION REQUEST
         // ======================================================
 
         builder
-            .addCase(acceptConnectionRequest.pending, (state) => {
-                state.loading = true;
-                state.error = null;
-            })
-
-            .addCase(acceptConnectionRequest.fulfilled, (state) => {
-                state.loading = false;
-            })
-
-            .addCase(acceptConnectionRequest.rejected, (state, action) => {
-                state.loading = false;
-                state.error = action.payload;
-            });
+            .addCase(
+                acceptConnectionRequest.pending,
+                (state) => {
+                    state.loading = true;
+                    state.error = null;
+                }
+            )
+            .addCase(
+                acceptConnectionRequest.fulfilled,
+                (state) => {
+                    state.loading = false;
+                }
+            )
+            .addCase(
+                acceptConnectionRequest.rejected,
+                (state, action) => {
+                    state.loading = false;
+                    state.error = action.payload;
+                }
+            );
 
         // ======================================================
         // FOLLOW USER
         // ======================================================
 
         builder
-            .addCase(followUser.pending, (state) => {
-                state.loading = true;
-                state.error = null;
-            })
-
-            .addCase(followUser.fulfilled, (state) => {
-                state.loading = false;
-            })
-
-            .addCase(followUser.rejected, (state, action) => {
-                state.loading = false;
-                state.error = action.payload;
-            });
+            .addCase(
+                followUser.pending,
+                (state) => {
+                    state.loading = true;
+                    state.error = null;
+                }
+            )
+            .addCase(
+                followUser.fulfilled,
+                (state) => {
+                    state.loading = false;
+                }
+            )
+            .addCase(
+                followUser.rejected,
+                (state, action) => {
+                    state.loading = false;
+                    state.error = action.payload;
+                }
+            );
 
         // ======================================================
         // UNFOLLOW USER
         // ======================================================
 
         builder
-            .addCase(unfollowUser.pending, (state) => {
-                state.loading = true;
-                state.error = null;
-            })
-
-            .addCase(unfollowUser.fulfilled, (state) => {
-                state.loading = false;
-            })
-
-            .addCase(unfollowUser.rejected, (state, action) => {
-                state.loading = false;
-                state.error = action.payload;
-            });
+            .addCase(
+                unfollowUser.pending,
+                (state) => {
+                    state.loading = true;
+                    state.error = null;
+                }
+            )
+            .addCase(
+                unfollowUser.fulfilled,
+                (state) => {
+                    state.loading = false;
+                }
+            )
+            .addCase(
+                unfollowUser.rejected,
+                (state, action) => {
+                    state.loading = false;
+                    state.error = action.payload;
+                }
+            );
     },
 });
 
 export const {
     clearConnections,
+    addFollowing,
+    removeFollowing,
 } = connectionSlice.actions;
 
 export default connectionSlice.reducer;
