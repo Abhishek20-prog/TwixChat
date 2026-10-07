@@ -101,9 +101,54 @@ export const markMessageAsRead = createAsyncThunk(
     }
 );
 
+export const deleteMessageForSender = createAsyncThunk(
+    "message/deleteMessageForSender",
+    async ({ token, messageId }, { rejectWithValue }) => {
+        try {
+            const { data } = await api.delete(
+                `/api/message/${messageId}/sender`,
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                }
+            );
+
+            return data;
+        } catch (error) {
+            return rejectWithValue(
+                error.response?.data?.message ||
+                    "Failed to delete message"
+            );
+        }
+    }
+);
+
+export const deleteMessageForReceiver = createAsyncThunk(
+    "message/deleteMessageForReceiver",
+    async ({ token, messageId }, { rejectWithValue }) => {
+        try {
+            const { data } = await api.delete(
+                `/api/message/${messageId}/receiver`,
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                }
+            );
+
+            return data;
+        } catch (error) {
+            return rejectWithValue(
+                error.response?.data?.message ||
+                    "Failed to delete message"
+            );
+        }
+    }
+);
+
 const messageSlice = createSlice({
     name: "message",
-
     initialState,
 
     reducers: {
@@ -158,7 +203,6 @@ const messageSlice = createSlice({
 
             .addCase(fetchConversation.fulfilled, (state, action) => {
                 state.loading = false;
-
                 state.messages =
                     action.payload.messages || [];
 
@@ -206,6 +250,32 @@ const messageSlice = createSlice({
             })
 
             .addCase(markMessageAsRead.rejected, (state, action) => {
+                state.error = action.payload;
+            });
+
+        builder
+            .addCase(deleteMessageForSender.fulfilled, (state, action) => {
+                const messageId = action.meta.arg.messageId;
+
+                state.messages = state.messages.filter(
+                    (message) => message._id !== messageId
+                );
+            })
+
+            .addCase(deleteMessageForSender.rejected, (state, action) => {
+                state.error = action.payload;
+            });
+
+        builder
+            .addCase(deleteMessageForReceiver.fulfilled, (state, action) => {
+                const messageId = action.meta.arg.messageId;
+
+                state.messages = state.messages.filter(
+                    (message) => message._id !== messageId
+                );
+            })
+
+            .addCase(deleteMessageForReceiver.rejected, (state, action) => {
                 state.error = action.payload;
             });
     },
