@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import moment from "moment";
+import { useDispatch } from "react-redux";
+import { useAuth } from "@clerk/react";
 
 import dummyPosts from "../data/dummypost";
 import Loading from "../components/loading";
@@ -7,8 +8,12 @@ import StoriesBar from "../components/storiesbar";
 import PostCard from "../components/postcard";
 import Recentmessage from "../components/recentmessage";
 import Sponsered from "../components/sponsered";
+import { fetchRecentMessages } from "../features/messages/messageslice";
 
 const Feed = () => {
+  const dispatch = useDispatch();
+  const { getToken } = useAuth();
+
   const [feed, setFeed] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -21,51 +26,47 @@ const Feed = () => {
     fetchFeed();
   }, []);
 
+  useEffect(() => {
+    const loadRecentMessages = async () => {
+      const token = await getToken();
+
+      if (token) {
+        dispatch(fetchRecentMessages(token));
+      }
+    };
+
+    loadRecentMessages();
+  }, [dispatch, getToken]);
+
   if (loading) {
     return <Loading />;
   }
 
   return (
     <div className="h-full overflow-y-scroll no-scrollbar py-8 px-4 xl:px-6">
-      
-      {/* ========================= */}
-      {/* MAIN LAYOUT */}
-      {/* ========================= */}
-
       <div className="w-full max-w-[1400px] mx-auto flex gap-6">
 
-        {/* ========================= */}
         {/* MAIN FEED */}
-        {/* ========================= */}
-
         <div className="flex-1 min-w-0">
 
           {/* Stories */}
-
           <div className="mb-8">
             <StoriesBar />
           </div>
 
-          {/* ========================= */}
           {/* POST FEED */}
-          {/* ========================= */}
-
-            <div className="p-4 space-y-6">
-      {dummyPosts.map((post) => (
-        <PostCard
-          key={post.id}
-          post={post}
-        />
-      ))}
-    </div>
+          <div className="p-4 space-y-6">
+            {feed.map((post) => (
+              <PostCard
+                key={post.id}
+                post={post}
+              />
+            ))}
+          </div>
 
         </div>
 
-
-        {/* ========================= */}
         {/* RIGHT SIDEBAR */}
-        {/* ========================= */}
-
         <div
           className="
             hidden
@@ -76,23 +77,14 @@ const Feed = () => {
             gap-6
           "
         >
-
-          {/* ========================= */}
           {/* SPONSORED */}
-          {/* ========================= */}
-<Sponsered/>
+          <Sponsered />
 
-
-          {/* ========================= */}
           {/* RECENT MESSAGES */}
-          {/* ========================= */}
-<Recentmessage/>
-          
-
+          <Recentmessage />
         </div>
 
       </div>
-
     </div>
   );
 };

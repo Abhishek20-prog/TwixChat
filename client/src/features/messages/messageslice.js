@@ -1,5 +1,4 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
-
 import api from "../../api/axios.js";
 
 const initialState = {
@@ -10,10 +9,6 @@ const initialState = {
     sending: false,
     error: null,
 };
-
-// ======================================================
-// FETCH RECENT MESSAGES
-// ======================================================
 
 export const fetchRecentMessages = createAsyncThunk(
     "message/fetchRecentMessages",
@@ -29,15 +24,11 @@ export const fetchRecentMessages = createAsyncThunk(
         } catch (error) {
             return rejectWithValue(
                 error.response?.data?.message ||
-                "Failed to fetch recent messages"
+                    "Failed to fetch recent messages"
             );
         }
     }
 );
-
-// ======================================================
-// FETCH CONVERSATION
-// ======================================================
 
 export const fetchConversation = createAsyncThunk(
     "message/fetchConversation",
@@ -56,15 +47,11 @@ export const fetchConversation = createAsyncThunk(
         } catch (error) {
             return rejectWithValue(
                 error.response?.data?.message ||
-                "Failed to fetch conversation"
+                    "Failed to fetch conversation"
             );
         }
     }
 );
-
-// ======================================================
-// SEND MESSAGE
-// ======================================================
 
 export const sendNewMessage = createAsyncThunk(
     "message/sendNewMessage",
@@ -84,15 +71,11 @@ export const sendNewMessage = createAsyncThunk(
         } catch (error) {
             return rejectWithValue(
                 error.response?.data?.message ||
-                "Failed to send message"
+                    "Failed to send message"
             );
         }
     }
 );
-
-// ======================================================
-// MARK MESSAGE AS READ
-// ======================================================
 
 export const markMessageAsRead = createAsyncThunk(
     "message/markMessageAsRead",
@@ -112,18 +95,15 @@ export const markMessageAsRead = createAsyncThunk(
         } catch (error) {
             return rejectWithValue(
                 error.response?.data?.message ||
-                "Failed to mark message as read"
+                    "Failed to mark message as read"
             );
         }
     }
 );
 
-// ======================================================
-// MESSAGE SLICE
-// ======================================================
-
 const messageSlice = createSlice({
     name: "message",
+
     initialState,
 
     reducers: {
@@ -153,11 +133,6 @@ const messageSlice = createSlice({
     },
 
     extraReducers: (builder) => {
-
-        // ======================================================
-        // FETCH RECENT MESSAGES
-        // ======================================================
-
         builder
             .addCase(fetchRecentMessages.pending, (state) => {
                 state.loading = true;
@@ -175,10 +150,6 @@ const messageSlice = createSlice({
                 state.error = action.payload;
             });
 
-        // ======================================================
-        // FETCH CONVERSATION
-        // ======================================================
-
         builder
             .addCase(fetchConversation.pending, (state) => {
                 state.loading = true;
@@ -187,18 +158,18 @@ const messageSlice = createSlice({
 
             .addCase(fetchConversation.fulfilled, (state, action) => {
                 state.loading = false;
+
                 state.messages =
                     action.payload.messages || [];
+
+                state.selectedUser =
+                    action.payload.user || null;
             })
 
             .addCase(fetchConversation.rejected, (state, action) => {
                 state.loading = false;
                 state.error = action.payload;
             });
-
-        // ======================================================
-        // SEND MESSAGE
-        // ======================================================
 
         builder
             .addCase(sendNewMessage.pending, (state) => {
@@ -220,10 +191,6 @@ const messageSlice = createSlice({
                 state.sending = false;
                 state.error = action.payload;
             });
-
-        // ======================================================
-        // MARK MESSAGE AS READ
-        // ======================================================
 
         builder
             .addCase(markMessageAsRead.fulfilled, (state, action) => {

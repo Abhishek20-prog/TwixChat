@@ -1,19 +1,12 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { Link } from "react-router-dom";
 import moment from "moment";
-import dummyRecentMessages from "../data/dummyrecentmessage";
+import { useSelector } from "react-redux";
 
 const RecentMessage = () => {
-  const [recentMessages, setRecentMessages] = useState([]);
- 
-
-  const fetchRecentMessages = () => {
-    setRecentMessages(dummyRecentMessages);
-  };
-
-  useEffect(() => {
-    fetchRecentMessages();
-  }, []);
+  const { recentChats } = useSelector(
+    (state) => state.message
+  );
 
   return (
     <div
@@ -26,122 +19,112 @@ const RecentMessage = () => {
         shadow-sm
       "
     >
-      {/* Heading */}
       <h2 className="text-[15px] font-semibold text-[#17383A]">
         Recent Messages
       </h2>
 
-      {/* Messages */}
       <div className="mt-4 space-y-1">
-        {recentMessages.map((message) => (
-          <Link
-            to={`/message/${message.user.id}`}
-            key={message.id}
-            className="
-              flex
-              items-center
-              gap-3
-              p-2
-              rounded-xl
-              transition-all
-              duration-200
-              hover:bg-[#F3F7F6]
-            "
-          >
-            {/* Profile Picture */}
-            <div className="relative shrink-0">
-              <img
-                src={message.user.dp}
-                alt={message.user.name}
-                className="
-                  w-10
-                  h-10
-                  rounded-full
-                  object-cover
-                  transition-transform
-                  duration-200
-                  hover:scale-105
-                "
-              />
+        {recentChats.map((chat) => {
+          const user = chat.user;
+          const lastMessage = chat.lastMessage;
 
-              {/* Online Indicator */}
-              {message.isOnline && (
-                <span
+          return (
+            <Link
+              to={`/message/${user._id}`}
+              key={user._id}
+              className="
+                flex
+                items-center
+                gap-3
+                p-2
+                rounded-xl
+                transition-all
+                duration-200
+                hover:bg-[#F3F7F6]
+              "
+            >
+              {/* Profile Picture */}
+              <div className="relative shrink-0">
+                <img
+                  src={user.profile_picture}
+                  alt={user.full_name}
                   className="
-                    absolute
-                    bottom-0
-                    right-0
-                    w-3
-                    h-3
+                    w-10
+                    h-10
                     rounded-full
-                    bg-green-500
-                    border-2
-                    border-white
+                    object-cover
+                    transition-transform
+                    duration-200
+                    hover:scale-105
                   "
                 />
-              )}
-            </div>
-
-            {/* Message Info */}
-            <div className="min-w-0 flex-1">
-
-              <div className="flex items-center justify-between gap-2">
-                <h3 className="text-sm font-semibold text-[#17383A] truncate">
-                  {message.user.name}
-                </h3>
-
-                <span className="text-[10px] text-gray-400 shrink-0">
-                  {moment(message.createdAt).fromNow()}
-                </span>
               </div>
 
-              <div className="flex items-center justify-between gap-2">
-                <p
-                  className={`
-                    text-xs truncate
-                    ${
-                      message.isTyping
-                        ? "text-[#2E8B72] font-medium"
-                        : message.unreadCount > 0
-                        ? "text-[#17383A] font-medium"
-                        : "text-gray-500"
-                    }
-                  `}
-                >
-                  {message.isTyping
-                    ? "Typing..."
-                    : message.lastMessage.type === "image"
-                    ? "📷 Photo"
-                    : message.lastMessage.type === "video"
-                    ? "🎥 Video"
-                    : message.lastMessage.text}
-                </p>
+              {/* Message Info */}
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="text-sm font-semibold text-[#17383A] truncate">
+                    {user.full_name}
+                  </h3>
 
-                {/* Unread Count */}
-                {message.unreadCount > 0 && (
-                  <span
-                    className="
-                      min-w-5
-                      h-5
-                      px-1
-                      flex
-                      items-center
-                      justify-center
-                      rounded-full
-                      bg-[#17383A]
-                      text-white
-                      text-[10px]
-                      font-semibold
-                    "
-                  >
-                    {message.unreadCount}
+                  <span className="text-[10px] text-gray-400 shrink-0">
+                    {lastMessage?.createdAt
+                      ? moment(lastMessage.createdAt).fromNow()
+                      : ""}
                   </span>
-                )}
-              </div>
+                </div>
 
-            </div>
-          </Link>
-        ))}
+                <div className="flex items-center justify-between gap-2">
+                  <p
+                    className={`
+                      text-xs truncate
+                      ${
+                        chat.unread > 0
+                          ? "text-[#17383A] font-medium"
+                          : "text-gray-500"
+                      }
+                    `}
+                  >
+                    {lastMessage?.messageType === "image"
+                      ? "📷 Photo"
+                      : lastMessage?.messageType === "video"
+                      ? "🎥 Video"
+                      : lastMessage?.messageType === "file"
+                      ? "📎 File"
+                      : lastMessage?.content || ""}
+                  </p>
+
+                  {/* Unread Count */}
+                  {chat.unread > 0 && (
+                    <span
+                      className="
+                        min-w-5
+                        h-5
+                        px-1
+                        flex
+                        items-center
+                        justify-center
+                        rounded-full
+                        bg-[#17383A]
+                        text-white
+                        text-[10px]
+                        font-semibold
+                      "
+                    >
+                      {chat.unread}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </Link>
+          );
+        })}
+
+        {recentChats.length === 0 && (
+          <p className="text-xs text-gray-400 py-4 text-center">
+            No recent messages
+          </p>
+        )}
       </div>
     </div>
   );

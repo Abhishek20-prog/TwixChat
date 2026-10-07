@@ -1,447 +1,329 @@
-import  { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
-  MessageCircle,
-  MoreHorizontal,
-  Search,
+    MessageCircle,
+    MoreHorizontal,
+    Search,
 } from "lucide-react";
 import moment from "moment";
-import { Link, useNavigate } from "react-router-dom";
-
-import dummyMessages from "../data/dummymessage";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import { useAuth } from "@clerk/react";
+import {
+    fetchRecentMessages,
+    setSelectedUser,
+} from "../features/messages/messageslice";
 
 const Messages = () => {
-  const navigate = useNavigate();
+    const navigate = useNavigate();
+    const dispatch = useDispatch();
+    const { getToken } = useAuth();
+    const { userId } = useParams();
 
-  const [messages, setMessages] = useState([]);
-  const [search, setSearch] = useState("");
+    const { recentChats, loading } = useSelector(
+        (state) => state.message
+    );
 
-  // Load messages
-  useEffect(() => {
-    setMessages(dummyMessages);
-  }, []);
+    const [search, setSearch] = useState("");
 
-  // Search/filter messages
-  const filteredMessages = messages.filter(
-    (message) =>
-      message.user.name
-        .toLowerCase()
-        .includes(search.toLowerCase()) ||
-      message.user.username
-        .toLowerCase()
-        .includes(search.toLowerCase())
-  );
+    useEffect(() => {
+        const loadMessages = async () => {
+            const token = await getToken();
 
-  return (
-    <div className="min-h-screen bg-[#E8F5F3] px-6 py-8">
+            if (token) {
+                dispatch(fetchRecentMessages(token));
+            }
+        };
 
-      <div className="max-w-3xl mx-auto">
+        loadMessages();
+    }, [dispatch, getToken]);
 
-        {/* ================= HEADER ================= */}
-        <div className="flex items-end justify-between mb-6">
+    useEffect(() => {
+        if (!userId || !recentChats.length) return;
 
-          <div>
-            <h1 className="text-3xl font-bold text-[#17383A]">
-              Messages
-            </h1>
+        const chat = recentChats.find(
+            (chat) => chat.user?._id === userId
+        );
 
-            <p className="mt-1 text-sm text-gray-500">
-              Stay connected with your people.
-            </p>
-          </div>
+        if (chat?.user) {
+            dispatch(setSelectedUser(chat.user));
+        }
+    }, [userId, recentChats, dispatch]);
 
-          {/* New Message Button */}
-          <button
-            onClick={() => navigate("/messages/new")}
-            className="
-              w-10
-              h-10
-              rounded-full
-              bg-[#17383A]
-              text-white
-              flex
-              items-center
-              justify-center
-              cursor-pointer
-              transition-all
-              duration-200
-              hover:scale-105
-              hover:bg-[#285557]
-              active:scale-95
-            "
-          >
-            <MessageCircle size={19} />
-          </button>
+    const filteredMessages = recentChats.filter((chat) => {
+        const name = chat.user?.full_name || "";
+        const username = chat.user?.username || "";
 
-        </div>
+        return (
+            name.toLowerCase().includes(search.toLowerCase()) ||
+            username.toLowerCase().includes(search.toLowerCase())
+        );
+    });
 
+    const handleOpenChat = (user) => {
+        dispatch(setSelectedUser(user));
+        navigate(`/message/${user._id}`);
+    };
 
-        {/* ================= SEARCH ================= */}
-        <div
-          className="
-            flex
-            items-center
-            gap-3
-            px-4
-            h-11
-            mb-5
-            rounded-2xl
-            bg-white
-            border
-            border-[#E8E2D8]
-            shadow-sm
-            focus-within:border-[#17383A]
-            transition-all
-            duration-200
-          "
-        >
+    return (
+        <div className="min-h-screen bg-[#E8F5F3] px-6 py-8">
+            <div className="max-w-3xl mx-auto">
 
-          <Search
-            size={18}
-            className="text-gray-400"
-          />
+                <div className="flex items-end justify-between mb-6">
+                    <div>
+                        <h1 className="text-3xl font-bold text-[#17383A]">
+                            Messages
+                        </h1>
 
-          <input
-            type="text"
-            placeholder="Search conversations..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="
-              w-full
-              bg-transparent
-              outline-none
-              text-sm
-              text-[#17383A]
-              placeholder:text-gray-400
-            "
-          />
+                        <p className="mt-1 text-sm text-gray-500">
+                            Stay connected with your people.
+                        </p>
+                    </div>
 
-        </div>
+                    <button
+                        onClick={() => navigate("/messages/new")}
+                        className="
+                            w-10 h-10 rounded-full
+                            bg-[#17383A] text-white
+                            flex items-center justify-center
+                            cursor-pointer
+                            transition-all duration-200
+                            hover:scale-105
+                            hover:bg-[#285557]
+                            active:scale-95
+                        "
+                    >
+                        <MessageCircle size={19} />
+                    </button>
+                </div>
 
-
-        {/* ================= MESSAGE LIST ================= */}
-        <div className="space-y-3">
-
-          {filteredMessages.map((message) => (
-
-            <Link
-              to={`/message/${message.user.id}`}
-              key={message.id}
-              className="
-                group
-                relative
-                flex
-                items-center
-                gap-4
-                p-4
-                rounded-[24px]
-                bg-white/80
-                border
-                border-[#E8E2D8]
-                shadow-sm
-                transition-all
-                duration-200
-                hover:-translate-y-[2px]
-                hover:shadow-md
-                hover:border-[#C9D2D0]
-                cursor-pointer
-              "
-            >
-
-              {/* ================= PROFILE PICTURE ================= */}
-              <div className="relative shrink-0">
-
-                <img
-                  src={message.user.dp}
-                  alt={message.user.name}
-                  className="
-                    w-14
-                    h-14
-                    rounded-full
-                    object-cover
-                    ring-2
-                    ring-white
-                    transition-transform
-                    duration-200
-                    group-hover:scale-105
-                  "
-                />
-
-                {/* Online Indicator */}
-                {message.status === "Online" && (
-                  <span
+                <div
                     className="
-                      absolute
-                      right-0
-                      bottom-0
-                      w-4
-                      h-4
-                      rounded-full
-                      bg-[#39B77A]
-                      border-[3px]
-                      border-white
+                        flex items-center gap-3
+                        px-4 h-11 mb-5
+                        rounded-2xl bg-white
+                        border border-[#E8E2D8]
+                        shadow-sm
+                        focus-within:border-[#17383A]
+                        transition-all duration-200
                     "
-                  />
+                >
+                    <Search
+                        size={18}
+                        className="text-gray-400"
+                    />
+
+                    <input
+                        type="text"
+                        placeholder="Search conversations..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        className="
+                            w-full bg-transparent outline-none
+                            text-sm text-[#17383A]
+                            placeholder:text-gray-400
+                        "
+                    />
+                </div>
+
+                {loading && (
+                    <div className="text-center py-10 text-sm text-gray-500">
+                        Loading conversations...
+                    </div>
                 )}
 
-              </div>
+                {!loading && (
+                    <div className="space-y-3">
+                        {filteredMessages.map((chat) => {
+                            const user = chat.user;
+                            const lastMessage = chat.lastMessage;
 
+                            return (
+                                <Link
+                                    to={`/message/${user._id}`}
+                                    key={user._id}
+                                    onClick={() =>
+                                        dispatch(setSelectedUser(user))
+                                    }
+                                    className="
+                                        group relative
+                                        flex items-center gap-4
+                                        p-4 rounded-[24px]
+                                        bg-white/80
+                                        border border-[#E8E2D8]
+                                        shadow-sm
+                                        transition-all duration-200
+                                        hover:-translate-y-[2px]
+                                        hover:shadow-md
+                                        hover:border-[#C9D2D0]
+                                        cursor-pointer
+                                    "
+                                >
+                                    <div className="relative shrink-0">
+                                        <img
+                                            src={user.profile_picture}
+                                            alt={user.full_name}
+                                            className="
+                                                w-14 h-14 rounded-full
+                                                object-cover ring-2 ring-white
+                                                transition-transform duration-200
+                                                group-hover:scale-105
+                                            "
+                                        />
+                                    </div>
 
-              {/* ================= MAIN CONTENT ================= */}
-              <div className="flex-1 min-w-0">
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center justify-between gap-3">
+                                            <h2
+                                                className="
+                                                    text-sm font-semibold
+                                                    text-[#17383A] truncate
+                                                    transition-colors duration-200
+                                                    group-hover:text-[#285557]
+                                                "
+                                            >
+                                                {user.full_name}
+                                            </h2>
 
-                {/* Name + Time */}
-                <div className="flex items-center justify-between gap-3">
+                                            <span className="text-[10px] text-gray-400 shrink-0">
+                                                {lastMessage?.createdAt
+                                                    ? moment(
+                                                        lastMessage.createdAt
+                                                    ).fromNow()
+                                                    : ""}
+                                            </span>
+                                        </div>
 
-                  <div className="flex items-center gap-2 min-w-0">
+                                        <p className="text-[11px] text-gray-400 mt-0.5 truncate">
+                                            {user.username}
+                                        </p>
 
-                    <h2
-                      className="
-                        text-sm
-                        font-semibold
-                        text-[#17383A]
-                        truncate
-                        transition-colors
-                        duration-200
-                        group-hover:text-[#285557]
-                      "
-                    >
-                      {message.user.name}
-                    </h2>
+                                        <div className="flex items-center justify-between gap-3 mt-2">
+                                            <p
+                                                className={`
+                                                    text-xs truncate
+                                                    ${
+                                                        chat.unread > 0
+                                                            ? "font-semibold text-[#17383A]"
+                                                            : "text-gray-500"
+                                                    }
+                                                `}
+                                            >
+                                                {lastMessage?.messageType ===
+                                                "image"
+                                                    ? "📷 Photo"
+                                                    : lastMessage?.messageType ===
+                                                      "video"
+                                                    ? "🎥 Video"
+                                                    : lastMessage?.messageType ===
+                                                      "file"
+                                                    ? "📎 File"
+                                                    : lastMessage?.content || ""}
+                                            </p>
 
-                    {/* Online Badge */}
-                    {message.status === "Online" && (
-                      <span
-                        className="
-                          text-[9px]
-                          font-medium
-                          text-[#39B77A]
-                          bg-[#EAF8F1]
-                          px-2
-                          py-0.5
-                          rounded-full
-                          shrink-0
-                        "
-                      >
-                        Online
-                      </span>
-                    )}
+                                            {chat.unread > 0 && (
+                                                <span
+                                                    className="
+                                                        shrink-0 min-w-5 h-5 px-1.5
+                                                        rounded-full
+                                                        bg-[#17383A]
+                                                        text-white
+                                                        text-[10px]
+                                                        font-semibold
+                                                        flex items-center justify-center
+                                                    "
+                                                >
+                                                    {chat.unread}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
 
-                  </div>
+                                    <div
+                                        className="
+                                            flex items-center gap-1
+                                            opacity-0 translate-x-2
+                                            group-hover:opacity-100
+                                            group-hover:translate-x-0
+                                            transition-all duration-200
+                                        "
+                                    >
+                                        <button
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                handleOpenChat(user);
+                                            }}
+                                            className="
+                                                w-8 h-8 rounded-full
+                                                flex items-center justify-center
+                                                text-gray-400
+                                                hover:text-[#17383A]
+                                                hover:bg-[#F3F7F6]
+                                                transition-all duration-200
+                                                hover:scale-110
+                                                active:scale-90
+                                                cursor-pointer
+                                            "
+                                        >
+                                            <MessageCircle size={16} />
+                                        </button>
 
-                  {/* Time */}
-                  <span
-                    className="
-                      text-[10px]
-                      text-gray-400
-                      shrink-0
-                    "
-                  >
-                    {moment(message.createdAt).fromNow()}
-                  </span>
+                                        <button
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
 
-                </div>
+                                                console.log(
+                                                    "More options:",
+                                                    user.full_name
+                                                );
+                                            }}
+                                            className="
+                                                w-8 h-8 rounded-full
+                                                flex items-center justify-center
+                                                text-gray-400
+                                                hover:text-[#17383A]
+                                                hover:bg-[#F3F7F6]
+                                                transition-all duration-200
+                                                hover:scale-110
+                                                active:scale-90
+                                                cursor-pointer
+                                            "
+                                        >
+                                            <MoreHorizontal size={17} />
+                                        </button>
+                                    </div>
+                                </Link>
+                            );
+                        })}
+                    </div>
+                )}
 
+                {!loading && filteredMessages.length === 0 && (
+                    <div className="text-center py-12">
+                        <div
+                            className="
+                                w-12 h-12 mx-auto rounded-full
+                                bg-[#EAF3F1]
+                                flex items-center justify-center
+                                text-[#17383A]
+                            "
+                        >
+                            <Search size={20} />
+                        </div>
 
-                {/* Username */}
-                <p
-                  className="
-                    text-[11px]
-                    text-gray-400
-                    mt-0.5
-                    truncate
-                  "
-                >
-                  {message.user.username}
-                </p>
+                        <p className="mt-3 text-sm font-medium text-[#17383A]">
+                            No conversations found
+                        </p>
 
-
-                {/* ================= LAST MESSAGE ================= */}
-                <div
-                  className="
-                    flex
-                    items-center
-                    justify-between
-                    gap-3
-                    mt-2
-                  "
-                >
-
-                  <p
-                    className={`
-                      text-xs
-                      truncate
-                      ${
-                        message.unread > 0
-                          ? "font-semibold text-[#17383A]"
-                          : "text-gray-500"
-                      }
-                    `}
-                  >
-                    {message.message}
-                  </p>
-
-
-                  {/* Unread Count */}
-                  {message.unread > 0 && (
-                    <span
-                      className="
-                        shrink-0
-                        min-w-5
-                        h-5
-                        px-1.5
-                        rounded-full
-                        bg-[#17383A]
-                        text-white
-                        text-[10px]
-                        font-semibold
-                        flex
-                        items-center
-                        justify-center
-                      "
-                    >
-                      {message.unread}
-                    </span>
-                  )}
-
-                </div>
-
-              </div>
-
-
-              {/* ================= ACTIONS ================= */}
-              <div
-                className="
-                  flex
-                  items-center
-                  gap-1
-                  opacity-0
-                  translate-x-2
-                  group-hover:opacity-100
-                  group-hover:translate-x-0
-                  transition-all
-                  duration-200
-                "
-              >
-
-                {/* Open Chat */}
-                <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-
-                    navigate(`/message/${message.user.id}`);
-                  }}
-                  className="
-                    w-8
-                    h-8
-                    rounded-full
-                    flex
-                    items-center
-                    justify-center
-                    text-gray-400
-                    hover:text-[#17383A]
-                    hover:bg-[#F3F7F6]
-                    transition-all
-                    duration-200
-                    hover:scale-110
-                    active:scale-90
-                    cursor-pointer
-                  "
-                >
-                  <MessageCircle size={16} />
-                </button>
-
-
-                {/* More Options */}
-                <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-
-                    console.log(
-                      "More options:",
-                      message.user.name
-                    );
-                  }}
-                  className="
-                    w-8
-                    h-8
-                    rounded-full
-                    flex
-                    items-center
-                    justify-center
-                    text-gray-400
-                    hover:text-[#17383A]
-                    hover:bg-[#F3F7F6]
-                    transition-all
-                    duration-200
-                    hover:scale-110
-                    active:scale-90
-                    cursor-pointer
-                  "
-                >
-                  <MoreHorizontal size={17} />
-                </button>
-
-              </div>
-
-            </Link>
-
-          ))}
-
-        </div>
-
-
-        {/* ================= NO RESULTS ================= */}
-        {filteredMessages.length === 0 && (
-
-          <div className="text-center py-12">
-
-            <div
-              className="
-                w-12
-                h-12
-                mx-auto
-                rounded-full
-                bg-[#EAF3F1]
-                flex
-                items-center
-                justify-center
-                text-[#17383A]
-              "
-            >
-              <Search size={20} />
+                        <p className="mt-1 text-xs text-gray-400">
+                            Try searching for another person.
+                        </p>
+                    </div>
+                )}
             </div>
-
-            <p
-              className="
-                mt-3
-                text-sm
-                font-medium
-                text-[#17383A]
-              "
-            >
-              No conversations found
-            </p>
-
-            <p
-              className="
-                text-xs
-                text-gray-400
-                mt-1
-              "
-            >
-              Try searching for another person.
-            </p>
-
-          </div>
-
-        )}
-
-      </div>
-
-    </div>
-  );
+        </div>
+    );
 };
 
 export default Messages;
