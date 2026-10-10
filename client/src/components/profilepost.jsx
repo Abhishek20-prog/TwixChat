@@ -20,7 +20,11 @@ const API_BASE_URL = (
     ""
 ).replace(/\/$/, "");
 
-const ProfilePost = ({ posts = [], canManagePosts = false }) => {
+const ProfilePost = ({
+    posts = [],
+    canManagePosts = false,
+    onPostDeleted,
+}) => {
     const { getToken } = useAuth();
 
     const [localPosts, setLocalPosts] = useState(posts);
@@ -144,13 +148,15 @@ const ProfilePost = ({ posts = [], canManagePosts = false }) => {
                 throw new Error(data.message || "Could not delete post.");
             }
 
-            setLocalPosts((currentPosts) =>
-                currentPosts.filter(
-                    (post) =>
-                        String(post._id || post.id) !==
-                        String(deletingPost._id || deletingPost.id)
-                )
-            );
+           const deletedPostId = String(deletingPost._id || deletingPost.id);
+
+setLocalPosts((currentPosts) =>
+    currentPosts.filter(
+        (post) => String(post._id || post.id) !== deletedPostId
+    )
+);
+
+onPostDeleted?.(deletedPostId);
 
             setDeletingPost(null);
             setOpenMenu(null);

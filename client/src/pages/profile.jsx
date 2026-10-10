@@ -30,7 +30,8 @@ const Profile = () => {
         let cancelled = false;
 
         const loadProfile = async () => {
-            const targetId = profileId || currentUser?._id || currentUser?.id;
+            const targetId =
+                profileId || currentUser?._id || currentUser?.id;
 
             if (!targetId) {
                 setProfileLoading(true);
@@ -46,7 +47,9 @@ const Profile = () => {
                 const token = await getToken();
 
                 if (!token) {
-                    throw new Error("Authentication token not available");
+                    throw new Error(
+                        "Authentication token not available"
+                    );
                 }
 
                 const { data } = await api.get(
@@ -62,7 +65,9 @@ const Profile = () => {
                 console.log("PROFILE POSTS:", data.posts);
 
                 if (!data.success) {
-                    throw new Error(data.message || "Failed to load profile");
+                    throw new Error(
+                        data.message || "Failed to load profile"
+                    );
                 }
 
                 if (cancelled) return;
@@ -70,11 +75,15 @@ const Profile = () => {
                 const user = data.profile || data.user;
 
                 if (!user) {
-                    throw new Error("Profile data is missing from the response");
+                    throw new Error(
+                        "Profile data is missing from the response"
+                    );
                 }
 
                 setProfileUser(user);
-                setPosts(Array.isArray(data.posts) ? data.posts : []);
+                setPosts(
+                    Array.isArray(data.posts) ? data.posts : []
+                );
             } catch (error) {
                 if (cancelled) return;
 
@@ -82,8 +91,8 @@ const Profile = () => {
 
                 setProfileError(
                     error.response?.data?.message ||
-                    error.message ||
-                    "Unable to load profile"
+                        error.message ||
+                        "Unable to load profile"
                 );
             } finally {
                 if (!cancelled) {
@@ -97,7 +106,24 @@ const Profile = () => {
         return () => {
             cancelled = true;
         };
-    }, [profileId, currentUser?._id, currentUser?.id, getToken]);
+    }, [
+        profileId,
+        currentUser?._id,
+        currentUser?.id,
+        getToken,
+    ]);
+
+    // Remove a deleted post from the parent state.
+    // All profile tabs derive their posts from this state.
+    const handlePostDeleted = (deletedPostId) => {
+        setPosts((currentPosts) =>
+            currentPosts.filter(
+                (post) =>
+                    String(post._id || post.id) !==
+                    String(deletedPostId)
+            )
+        );
+    };
 
     const displayedPosts = useMemo(() => {
         if (activeTab === "media") {
@@ -177,7 +203,9 @@ const Profile = () => {
                         user={profileUser}
                         posts={posts}
                         isOwnProfile={isOwnProfile}
-                        setshowedit={isOwnProfile ? setShowEdit : undefined}
+                        setshowedit={
+                            isOwnProfile ? setShowEdit : undefined
+                        }
                     />
                 </div>
 
@@ -194,20 +222,20 @@ const Profile = () => {
                                         : "text-[#5F7775] hover:bg-[#E8F5F3] hover:text-[#17383A]"
                                 }`}
                             >
-                                {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                                {tab.charAt(0).toUpperCase() +
+                                    tab.slice(1)}
                             </button>
                         ))}
                     </div>
 
                     <div className="mt-6">
-                       
-{displayedPosts.length > 0 ? (
-    <ProfilePost
-        posts={displayedPosts}
-        canManagePosts={isOwnProfile}
-    />
-) : (
-
+                        {displayedPosts.length > 0 ? (
+                            <ProfilePost
+                                posts={displayedPosts}
+                                canManagePosts={isOwnProfile}
+                                onPostDeleted={handlePostDeleted}
+                            />
+                        ) : (
                             <div className="py-12 text-center">
                                 <p className="text-sm font-medium text-[#17383A]">
                                     No {activeTab} yet
