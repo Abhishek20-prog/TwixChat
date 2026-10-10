@@ -1,6 +1,8 @@
+
 import express from "express";
 import { protect } from "../middleware/auth.js";
 import { upload } from "../config/multer.js";
+
 import {
     addPost,
     getFeedPosts,
@@ -12,7 +14,13 @@ import {
 
 const postrouter = express.Router();
 
-postrouter.post("/add", protect, upload.array("images", 5), addPost);
+postrouter.post(
+    "/add",
+    protect,
+    upload.array("images", 5),
+    addPost
+);
+
 postrouter.get("/feed", protect, getFeedPosts);
 postrouter.post("/like", protect, likePost);
 postrouter.get("/profile/:profileId", protect, getProfilePosts);

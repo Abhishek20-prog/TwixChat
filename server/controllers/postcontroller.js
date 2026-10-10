@@ -1,15 +1,61 @@
+
 import fs from "fs/promises";
+import { createReadStream } from "fs";
 import { Post } from "../models/post.js";
 import imagekit from "../config/imagekit.js";
 import User from "../models/user.js";
 import mongoose from "mongoose";
 
 export const addPost = async (req, res) => {
+    const files = req.files || [];
+    const uploadedPaths = files
+        .map((file) => file.path)
+        .filter(Boolean);
+
     try {
-        const { content = "", post_type } = req.body;
+        const { content = "" } = req.body;
         const { userId: clerkId } = req.auth();
-        const files = req.files || [];
-        console.log("Files:", files);
+
+        if (typeof content !== "string" || content.length > 5000) {
+            return res.status(400).json({
+                success: false,
+                message: "Caption must be text and cannot exceed 5000 characters",
+            });
+        }
+
+        if (files.length > 5) {
+            return res.status(400).json({
+                success: false,
+                message: "You can upload a maximum of 5 files per post",
+            });
+        }
+
+        const hasImages = files.some((file) =>
+            file.mimetype?.startsWith("image/")
+        );
+        const hasVideos = files.some((file) =>
+            file.mimetype?.startsWith("video/")
+        );
+
+        if (
+            files.some(
+                (file) =>
+                    !file.mimetype?.startsWith("image/") &&
+                    !file.mimetype?.startsWith("video/")
+            )
+        ) {
+            return res.status(400).json({
+                success: false,
+                message: "Only image and video files are supported",
+            });
+        }
+
+        if (hasImages && hasVideos) {
+            return res.status(400).json({
+                success: false,
+                message: "Upload images and videos in separate posts",
+            });
+        }
 
         const user = await User.findOne({ clerkId });
 
@@ -20,43 +66,63 @@ export const addPost = async (req, res) => {
             });
         }
 
-        const image_url = await Promise.all(
-            files.map(async (image) => {
-                try {
-                    const fileBuffer = await fs.readFile(image.path);
+        const image_url = [];
+        const video_url = [];
 
-const response = await imagekit.files.upload({
-    file: fileBuffer.toString("base64"),
-    fileName: image.originalname,
-    folder: "posts",
-});
+        for (const file of files) {
+            const fileSize = file.size;
+const sizeMB = fileSize / (1024 * 1024);
 
-                    return imagekit.helper.buildSrc({
-                        urlEndpoint: process.env.IMAGEKIT_URL_ENDPOINT,
-                        src: response.filePath,
-                        transformation: [
-                            { quality: "auto" },
-                            { format: "webp" },
-                            { width: 1280 },
-                        ],
-                    });
-                } finally {
-                    try {
-                        await fs.unlink(image.path);
-                    } catch (error) {
-                        console.error(
-                            "Temporary file deletion failed:",
-                            error.message
-                        );
-                    }
-                }
-            })
-        );
+            console.log(
+                `Uploading ${file.originalname}: ${sizeMB.toFixed(2)} MB`
+            );
+
+            if (fileSize > 100 * 1024 * 1024) {
+                return res.status(413).json({
+                    success: false,
+                    message:
+                        `${file.originalname} exceeds 100 MB. ` +
+                        "This upload route cannot send files larger than 100 MB.",
+                });
+            }
+
+            const response = await imagekit.files.upload({
+                file: createReadStream(file.path),
+                fileName: file.originalname,
+                folder: "posts",
+                useUniqueFileName: true,
+            });
+
+            if (file.mimetype.startsWith("video/")) {
+                video_url.push(response.url);
+            } else {
+                const imageUrl = imagekit.helper.buildSrc({
+                    urlEndpoint: process.env.IMAGEKIT_URL_ENDPOINT,
+                    src: response.filePath,
+                    transformation: [
+                        { quality: "auto" },
+                        { format: "webp" },
+                        { width: 1280 },
+                    ],
+                });
+
+                image_url.push(imageUrl);
+            }
+        }
+
+        let post_type = "text";
+
+        if (video_url.length) {
+            post_type = content.trim() ? "video_text" : "video";
+        } else if (image_url.length) {
+            post_type = content.trim() ? "image_text" : "image";
+        }
 
         const post = await Post.create({
             userId: user._id,
-            content,
+            content: content.trim(),
             image_url,
+            video_url,
             post_type,
         });
 
@@ -66,15 +132,31 @@ const response = await imagekit.files.upload({
             post,
         });
     } catch (error) {
-        console.error("Add Post Error:", error);
-
-        return res.status(500).json({
-            success: false,
+        console.error("Add Post Error:", {
             message: error.message,
+            name: error.name,
+            status: error.status,
+            statusCode: error.statusCode,
         });
+
+        return res.status(error.status || error.statusCode || 500).json({
+            success: false,
+            message: error.message || "Failed to create post",
+        });
+    } finally {
+        await Promise.all(
+            uploadedPaths.map(async (filePath) => {
+                try {
+                    await fs.unlink(filePath);
+                } catch (error) {
+                    if (error.code !== "ENOENT") {
+                        console.error("Temporary file cleanup failed:", error.message);
+                    }
+                }
+            })
+        );
     }
 };
-
 
 export const getFeedPosts = async (req, res) => {
     try {
@@ -98,7 +180,7 @@ export const getFeedPosts = async (req, res) => {
         ];
 
         const uniqueUserIds = [
-            ...new Set(userIds.map(id => id.toString())),
+            ...new Set(userIds.map((id) => id.toString())),
         ];
 
         const posts = await Post.find({
@@ -154,12 +236,12 @@ export const likePost = async (req, res) => {
         }
 
         const alreadyLiked = post.likes.some(
-            id => id.toString() === user._id.toString()
+            (id) => id.toString() === user._id.toString()
         );
 
         if (alreadyLiked) {
             post.likes = post.likes.filter(
-                id => id.toString() !== user._id.toString()
+                (id) => id.toString() !== user._id.toString()
             );
 
             await post.save();
@@ -188,6 +270,7 @@ export const likePost = async (req, res) => {
         });
     }
 };
+
 export const updatePost = async (req, res) => {
     try {
         const { userId: clerkId } = req.auth();
