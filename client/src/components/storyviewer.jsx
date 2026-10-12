@@ -1,287 +1,379 @@
+
 import { BadgeCheck, X, ChevronLeft, ChevronRight, Play } from "lucide-react";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 const STORY_DURATION = 10000;
 
-const Storyviewer = ({ viewstory, setviewstory }) => {
-  const [progress, setProgress] = useState(0);
-  const videoRef = useRef(null);
+const Storyviewer = ({
+    viewstory,
+    setviewstory,
+    stories = [],
+}) => {
+    const [progress, setProgress] = useState(0);
+    const videoRef = useRef(null);
 
-  // ==========================================
-  // GET USER INFORMATION
-  // ==========================================
+    const profileImage =
+        viewstory?.user?.profile_picture ||
+        viewstory?.user?.dp ||
+        viewstory?.user?.avatar ||
+        "";
 
-  const profileImage =
-    viewstory?.user?.profile_picture ||
-    viewstory?.user?.dp ||
-    viewstory?.user?.avatar ||
-    "";
+    const userName =
+        viewstory?.user?.full_name ||
+        viewstory?.user?.name ||
+        viewstory?.user?.username ||
+        "User";
 
-  const userName =
-    viewstory?.user?.full_name ||
-    viewstory?.user?.name ||
-    viewstory?.user?.username ||
-    "User";
+    const getStoryIndex = useCallback(() => {
+        if (!viewstory) return -1;
 
-  // ==========================================
-  // CLOSE STORY
-  // ==========================================
+        return stories.findIndex((story) => {
+            if (story === viewstory) return true;
 
-  const handleClose = () => {
-    setviewstory(null);
-  };
+            const currentId = viewstory._id || viewstory.id;
+            const storyId = story._id || story.id;
 
-  // ==========================================
-  // IMAGE / TEXT STORY PROGRESS
-  // ==========================================
+            return Boolean(
+                currentId && storyId && String(currentId) === String(storyId)
+            );
+        });
+    }, [stories, viewstory]);
 
-  useEffect(() => {
-    if (!viewstory) return;
+    const currentIndex = getStoryIndex();
 
-    if (viewstory.media_type === "video") return;
+    const getUserId = useCallback((story) => {
+        return (
+            story?.user?._id ||
+            story?.user?.clerkId ||
+            story?.user?.username ||
+            story?.userId?._id ||
+            story?.userId ||
+            null
+        );
+    }, []);
 
-    setProgress(0);
+    const currentUserStories = useMemo(() => {
+        if (!viewstory) return [];
 
-    const startTime = Date.now();
+        const currentUserId = getUserId(viewstory);
 
-    const progressInterval = setInterval(() => {
-      const elapsed = Date.now() - startTime;
-      const percentage = Math.min(
-        (elapsed / STORY_DURATION) * 100,
-        100
-      );
+        if (!currentUserId) return [viewstory];
 
-      setProgress(percentage);
-    }, 50);
+        const matchingStories = stories.filter((story) => {
+            const storyUserId = getUserId(story);
 
-    const timer = setTimeout(() => {
-      setviewstory(null);
-    }, STORY_DURATION);
+            return (
+                storyUserId &&
+                String(storyUserId) === String(currentUserId)
+            );
+        });
 
-    return () => {
-      clearInterval(progressInterval);
-      clearTimeout(timer);
+        return matchingStories.length ? matchingStories : [viewstory];
+    }, [stories, viewstory, getUserId]);
+
+    const currentUserStoryIndex = currentUserStories.findIndex((story) => {
+        const currentId = viewstory?._id || viewstory?.id;
+        const storyId = story?._id || story?.id;
+
+        return (
+            currentId &&
+            storyId &&
+            String(currentId) === String(storyId)
+        );
+    });
+
+    const handleClose = useCallback(() => {
+        setviewstory(null);
+    }, [setviewstory]);
+
+    const navigateStory = useCallback(
+        (direction) => {
+            if (!viewstory || !stories.length) return;
+
+            const index = getStoryIndex();
+
+            if (index === -1) {
+                handleClose();
+                return;
+            }
+
+            const nextIndex = index + direction;
+
+            if (nextIndex < 0) {
+                setviewstory(stories[0] || null);
+                return;
+            }
+
+            if (nextIndex >= stories.length) {
+                handleClose();
+                return;
+            }
+
+            setviewstory(stories[nextIndex]);
+        },
+        [viewstory, stories, getStoryIndex, setviewstory, handleClose]
+    );
+
+    const handlePrevious = useCallback(() => {
+        navigateStory(-1);
+    }, [navigateStory]);
+
+    const handleNext = useCallback(() => {
+        navigateStory(1);
+    }, [navigateStory]);
+
+    useEffect(() => {
+        if (!viewstory) return;
+
+        const handleKeyDown = (event) => {
+            if (event.key === "Escape") handleClose();
+            if (event.key === "ArrowLeft") handlePrevious();
+            if (event.key === "ArrowRight") handleNext();
+        };
+
+        window.addEventListener("keydown", handleKeyDown);
+
+        return () => {
+            window.removeEventListener("keydown", handleKeyDown);
+        };
+    }, [viewstory, handleClose, handlePrevious, handleNext]);
+
+    useEffect(() => {
+        if (!viewstory) return;
+
+        setProgress(0);
+
+        if (viewstory.media_type === "video") return;
+
+        const startTime = Date.now();
+
+        const progressInterval = setInterval(() => {
+            const elapsed = Date.now() - startTime;
+            setProgress(Math.min((elapsed / STORY_DURATION) * 100, 100));
+        }, 50);
+
+        const timer = setTimeout(() => {
+            navigateStory(1);
+        }, STORY_DURATION);
+
+        return () => {
+            clearInterval(progressInterval);
+            clearTimeout(timer);
+        };
+    }, [viewstory, navigateStory]);
+
+    const handleVideoProgress = () => {
+        const video = videoRef.current;
+
+        if (!video || !Number.isFinite(video.duration) || video.duration <= 0) {
+            return;
+        }
+
+        setProgress(
+            Math.min((video.currentTime / video.duration) * 100, 100)
+        );
     };
-  }, [viewstory, setviewstory]);
 
-  // ==========================================
-  // VIDEO PROGRESS
-  // ==========================================
+    const handleVideoEnded = () => {
+        navigateStory(1);
+    };
 
-  const handleVideoProgress = () => {
-    const video = videoRef.current;
+    if (!viewstory) return null;
 
-    if (!video || !video.duration) return;
+    const renderStory = () => {
+        switch (viewstory.media_type) {
+            case "image":
+                return viewstory.media_url ? (
+                    <img
+                        key={viewstory._id || viewstory.id || viewstory.media_url}
+                        src={viewstory.media_url}
+                        alt="Story"
+                        className="max-h-[85vh] max-w-full h-auto w-auto rounded-xl object-contain select-none"
+                        draggable="false"
+                    />
+                ) : (
+                    <div className="rounded-xl bg-[#17383A] p-8 text-center text-white">
+                        Image unavailable
+                    </div>
+                );
 
-    const percentage =
-      (video.currentTime / video.duration) * 100;
+            case "video":
+                return viewstory.media_url ? (
+                    <video
+                        key={viewstory._id || viewstory.id || viewstory.media_url}
+                        ref={videoRef}
+                        src={viewstory.media_url}
+                        className="max-h-[85vh] max-w-full h-auto w-auto rounded-xl object-contain"
+                        controls
+                        autoPlay
+                        playsInline
+                        onTimeUpdate={handleVideoProgress}
+                        onEnded={handleVideoEnded}
+                    />
+                ) : (
+                    <div className="rounded-xl bg-[#17383A] p-8 text-center text-white">
+                        Video unavailable
+                    </div>
+                );
 
-    setProgress(percentage);
-  };
+            case "text":
+                return (
+                    <div
+                        className="flex h-[min(80vh,700px)] w-[min(90vw,430px)] items-center justify-center rounded-2xl p-8"
+                        style={{
+                            background:
+                                viewstory.background_color ||
+                                "linear-gradient(135deg, #155E63, #F26B4D, #F9B233)",
+                        }}
+                    >
+                        <p className="break-words text-center text-2xl font-bold leading-relaxed text-white sm:text-3xl">
+                            {viewstory.content}
+                        </p>
+                    </div>
+                );
 
-  // ==========================================
-  // VIDEO ENDED
-  // ==========================================
+            default:
+                return (
+                    <div className="rounded-xl bg-[#17383A] px-8 py-10 text-center text-white">
+                        <p className="font-semibold">
+                            This story cannot be displayed.
+                        </p>
+                        <p className="mt-2 text-sm text-white/70">
+                            Try moving to the next story.
+                        </p>
+                    </div>
+                );
+        }
+    };
 
-  const handleVideoEnded = () => {
-    setviewstory(null);
-  };
+    const hasStoryList = currentIndex !== -1 && stories.length > 0;
 
-  // ==========================================
-  // RENDER STORY
-  // ==========================================
-
-  const renderStory = () => {
-    switch (viewstory.media_type) {
-      // ======================================
-      // IMAGE
-      // ======================================
-
-      case "image":
-        return (
-          <img
-            src={viewstory.media_url}
-            alt="Story"
-            className="max-w-full max-h-[85vh] w-auto h-auto object-contain rounded-xl select-none"
-            draggable="false"
-          />
-        );
-
-      // ======================================
-      // VIDEO
-      // ======================================
-
-      case "video":
-        return (
-          <video
-            ref={videoRef}
-            src={viewstory.media_url}
-            className="max-w-full max-h-[85vh] w-auto h-auto object-contain rounded-xl"
-            controls
-            autoPlay
-            playsInline
-            onTimeUpdate={handleVideoProgress}
-            onEnded={handleVideoEnded}
-          />
-        );
-
-      // ======================================
-      // TEXT
-      // ======================================
-
-      case "text":
-        return (
-          <div
-            className="w-[min(90vw,430px)] h-[min(80vh,700px)] rounded-2xl flex items-center justify-center p-8"
+    return (
+        <div
+            className="fixed inset-0 z-[110] flex items-center justify-center bg-black/90 backdrop-blur-sm"
             style={{
-              background:
-                viewstory.background_color ||
-                "linear-gradient(135deg, #155E63, #F26B4D, #F9B233)",
+                background:
+                    viewstory.media_type === "text"
+                        ? viewstory.background_color ||
+                          "linear-gradient(135deg, #155E63, #F26B4D, #F9B233)"
+                        : "#000000",
             }}
-          >
-            <p className="text-white text-2xl sm:text-3xl font-bold text-center leading-relaxed break-words">
-              {viewstory.content}
-            </p>
-          </div>
-        );
+        >
+            <div className="relative flex h-full w-full items-center justify-center">
+                {/* Progress segments for this user's stories only */}
+                <div className="absolute left-4 right-4 top-3 z-[150] flex gap-1">
+                    {currentUserStories.map((story, index) => {
+                        const isCompleted = index < currentUserStoryIndex;
+                        const isActive = index === currentUserStoryIndex;
 
-      default:
-        return null;
-    }
-  };
+                        return (
+                            <div
+                                key={story._id || story.id || index}
+                                className="h-1 min-w-0 flex-1 overflow-hidden rounded-full bg-white/30"
+                            >
+                                <div
+                                    className="h-full rounded-full bg-gradient-to-r from-[#58A6A6] via-[#F26B4D] to-[#F9B233]"
+                                    style={{
+                                        width: isCompleted
+                                            ? "100%"
+                                            : isActive
+                                              ? `${progress}%`
+                                              : "0%",
+                                    }}
+                                />
+                            </div>
+                        );
+                    })}
+                </div>
 
-  // ==========================================
-  // IF NO STORY
-  // ==========================================
+                <div className="absolute left-4 top-7 z-[150] flex items-center gap-3 rounded-xl border border-white/10 bg-black/45 px-3 py-2 backdrop-blur-xl">
+                    {profileImage ? (
+                        <img
+                            src={profileImage}
+                            alt={userName}
+                            className="h-9 w-9 rounded-full border-2 border-white/80 object-cover"
+                        />
+                    ) : (
+                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-[#155E63] via-[#F26B4D] to-[#F9B233] font-bold text-white">
+                            {userName.charAt(0).toUpperCase()}
+                        </div>
+                    )}
 
-  if (!viewstory) return null;
+                    <div className="flex items-center gap-1.5">
+                        <span className="max-w-[180px] truncate text-sm font-semibold text-white">
+                            {userName}
+                        </span>
+                        <BadgeCheck
+                            size={17}
+                            className="fill-[#155E63] text-[#58A6A6]"
+                        />
+                    </div>
+                </div>
 
-  return (
-    <div
-      className="fixed inset-0 z-[110] flex items-center justify-center bg-black/90 backdrop-blur-sm"
-      style={{
-        background:
-          viewstory.media_type === "text"
-            ? viewstory.background_color
-            : "#000000",
-      }}
-    >
+                <button
+                    type="button"
+                    onClick={handleClose}
+                    aria-label="Close story"
+                    className="absolute right-4 top-7 z-[150] flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-black/45 text-white backdrop-blur-xl transition-all duration-200 hover:scale-105 hover:bg-[#F26B4D]/80"
+                >
+                    <X size={23} />
+                </button>
 
-      {/* ======================================
-          STORY CONTAINER
-      ====================================== */}
+                <button
+                    type="button"
+                    onClick={handlePrevious}
+                    disabled={!hasStoryList || currentIndex <= 0}
+                    aria-label="Previous story"
+                    className="absolute left-4 top-1/2 z-[140] hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-black/40 text-white transition-all hover:bg-[#155E63] disabled:cursor-not-allowed disabled:opacity-30 md:flex"
+                >
+                    <ChevronLeft size={25} />
+                </button>
 
-      <div className="relative w-full h-full flex items-center justify-center">
+                <button
+                    type="button"
+                    onClick={handleNext}
+                    disabled={!hasStoryList}
+                    aria-label="Next story"
+                    className="absolute right-4 top-1/2 z-[140] hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-black/40 text-white transition-all hover:bg-[#F26B4D] disabled:cursor-not-allowed disabled:opacity-30 md:flex"
+                >
+                    <ChevronRight size={25} />
+                </button>
 
-        {/* ======================================
-            PROGRESS BAR
-        ====================================== */}
+                <div className="relative z-[100] flex max-h-[85vh] max-w-[90vw] items-center justify-center">
+                    {renderStory()}
+                </div>
 
-        <div className="absolute top-3 left-4 right-4 z-[150] h-1 bg-white/25 rounded-full overflow-hidden">
-          <div
-            className="h-full rounded-full bg-gradient-to-r from-[#58A6A6] via-[#F26B4D] to-[#F9B233]"
-            style={{
-              width: `${progress}%`,
-            }}
-          />
-        </div>
+                {viewstory.media_type === "video" && (
+                    <div className="pointer-events-none absolute bottom-6 left-1/2 z-[150] -translate-x-1/2">
+                        <div className="flex items-center gap-1.5 rounded-full bg-black/40 px-3 py-1.5 text-xs text-white/70 backdrop-blur-md">
+                            <Play size={12} fill="currentColor" />
+                            Playing
+                        </div>
+                    </div>
+                )}
 
-        {/* ======================================
-            USER INFO
-        ====================================== */}
+                <button
+                    type="button"
+                    onClick={handlePrevious}
+                    disabled={!hasStoryList || currentIndex <= 0}
+                    aria-label="Previous story"
+                    className="absolute bottom-5 left-5 z-[150] rounded-full bg-black/40 px-4 py-2 text-sm text-white disabled:opacity-30 md:hidden"
+                >
+                    Previous
+                </button>
 
-        <div className="absolute top-7 left-4 z-[150] flex items-center gap-3 px-3 py-2 rounded-xl bg-black/45 backdrop-blur-xl border border-white/10">
-
-          {/* PROFILE IMAGE */}
-
-          {profileImage ? (
-            <img
-              src={profileImage}
-              alt={userName}
-              className="w-9 h-9 rounded-full object-cover border-2 border-white/80"
-            />
-          ) : (
-            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#155E63] via-[#F26B4D] to-[#F9B233] flex items-center justify-center text-white font-bold">
-              {userName.charAt(0).toUpperCase()}
+                <button
+                    type="button"
+                    onClick={handleNext}
+                    disabled={!hasStoryList}
+                    aria-label="Next story"
+                    className="absolute bottom-5 right-5 z-[150] rounded-full bg-[#155E63]/90 px-4 py-2 text-sm font-semibold text-white disabled:opacity-30 md:hidden"
+                >
+                    Next
+                </button>
             </div>
-          )}
-
-          {/* USER NAME */}
-
-          <div className="flex items-center gap-1.5">
-
-            <span className="text-white text-sm font-semibold max-w-[180px] truncate">
-              {userName}
-            </span>
-
-            <BadgeCheck
-              size={17}
-              className="text-[#58A6A6] fill-[#155E63]"
-            />
-
-          </div>
-
         </div>
-
-        {/* ======================================
-            CLOSE BUTTON
-        ====================================== */}
-
-        <button
-          onClick={handleClose}
-          className="absolute top-7 right-4 z-[150] w-10 h-10 rounded-full bg-black/45 backdrop-blur-xl border border-white/10 flex items-center justify-center text-white hover:bg-[#F26B4D]/80 hover:scale-105 transition-all duration-200 cursor-pointer"
-        >
-          <X size={23} />
-        </button>
-
-        {/* ======================================
-            LEFT NAVIGATION
-        ====================================== */}
-
-        <button
-          onClick={handleClose}
-          className="absolute left-4 top-1/2 -translate-y-1/2 z-[140] hidden md:flex w-11 h-11 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 items-center justify-center text-white hover:bg-[#155E63] transition-all"
-        >
-          <ChevronLeft size={25} />
-        </button>
-
-        {/* ======================================
-            RIGHT NAVIGATION
-        ====================================== */}
-
-        <button
-          onClick={handleClose}
-          className="absolute right-4 top-1/2 -translate-y-1/2 z-[140] hidden md:flex w-11 h-11 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 items-center justify-center text-white hover:bg-[#F26B4D] transition-all"
-        >
-          <ChevronRight size={25} />
-        </button>
-
-        {/* ======================================
-            STORY CONTENT
-        ====================================== */}
-
-        <div className="relative z-[100] max-w-[90vw] max-h-[85vh] flex items-center justify-center">
-
-          {renderStory()}
-
-        </div>
-
-        {/* ======================================
-            MOBILE PAUSE INDICATOR / DECORATION
-        ====================================== */}
-
-        {viewstory.media_type === "video" && (
-          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[150] pointer-events-none">
-            <div className="px-3 py-1.5 rounded-full bg-black/40 backdrop-blur-md text-white/70 text-xs flex items-center gap-1.5">
-              <Play size={12} fill="currentColor" />
-              Playing
-            </div>
-          </div>
-        )}
-
-      </div>
-    </div>
-  );
+    );
 };
 
 export default Storyviewer;

@@ -1,3 +1,4 @@
+
 import mongoose from "mongoose";
 
 const storySchema = new mongoose.Schema(
@@ -10,7 +11,7 @@ const storySchema = new mongoose.Schema(
 
     content: {
       type: String,
-      required: true,
+      default: "",
       trim: true,
     },
 
@@ -31,14 +32,16 @@ const storySchema = new mongoose.Schema(
         ref: "User",
       },
     ],
+
     background_color: {
       type: String,
+      default: "",
     },
   },
   {
     timestamps: true,
     minimize: false,
-  },
+  }
 );
 
 export const Story = mongoose.model("Story", storySchema);

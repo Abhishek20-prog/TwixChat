@@ -1,108 +1,182 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-
-import dummyStories from "../data/dummystories";
+import { useAuth } from "@clerk/react";
+import toast from "react-hot-toast";
 import moment from "moment";
+
 import Storycreate from "./storycreate";
 import Storyviewer from "./storyviewer";
 
+const API_URL = import.meta.env.VITE_BASE_URL || "http://localhost:5000";
+const CARDS_PER_PAGE = 5;
+
 const StoriesBar = () => {
+  const { getToken } = useAuth();
+
   const [stories, setStories] = useState([]);
   const [startIndex, setStartIndex] = useState(0);
   const [direction, setDirection] = useState(1);
   const [showmodal, setshowmodal] = useState(false);
   const [viewstory, setviewstory] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const CARDS_PER_PAGE = 5;
+  const fetchstories = useCallback(async () => {
+    try {
+      const token = await getToken();
 
-  // =================================
-  // LOAD STORIES
-  // =================================
+      if (!token) {
+        throw new Error("Please sign in to view stories.");
+      }
+
+      const response = await fetch(`${API_URL}/api/story/feed`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || "Failed to load stories.");
+      }
+
+      const formattedStories = (data.stories || [])
+        .map((story) => {
+          const user = story.userId || {};
+          const mediaUrl = Array.isArray(story.media_url)
+            ? story.media_url[0] || ""
+            : story.media_url || "";
+
+          let type = story.story_type;
+
+          if (type === "image_text") {
+            type = mediaUrl ? "image" : "text";
+          }
+
+          if (!["image", "video", "text"].includes(type)) {
+            return null;
+          }
+
+          if ((type === "image" || type === "video") && !mediaUrl) {
+            return null;
+          }
+
+          return {
+            id: String(story._id),
+            _id: String(story._id),
+            createdAt: story.createdAt,
+            viewed: false,
+            media_type: type,
+            media_url: mediaUrl,
+            content: story.content || "",
+            background_color: story.background_color || "",
+            user: {
+              _id: String(user._id || user.clerkId || ""),
+              name: user.full_name || user.username || "User",
+              full_name: user.full_name || user.username || "User",
+              username: user.username || "",
+              dp: user.profile_picture || "",
+              profile_picture: user.profile_picture || "",
+            },
+          };
+        })
+        .filter(Boolean);
+
+      setStories(formattedStories);
+
+      setStartIndex(0);
+
+      setviewstory((current) => {
+        if (!current) return null;
+
+        const stillExists = formattedStories.find(
+          (story) => story.id === String(current.id || current._id),
+        );
+
+        return stillExists || null;
+      });
+    } catch (error) {
+      console.error("Fetch stories error:", error);
+      toast.error(error.message || "Could not load stories.");
+    } finally {
+      setLoading(false);
+    }
+  }, [getToken]);
 
   useEffect(() => {
-    setStories(dummyStories);
-  }, []);
+    fetchstories();
+  }, [fetchstories]);
 
-  // =================================
-  // REFRESH STORIES
-  // =================================
+  // Group stories by user so each user gets one card.
+  const groupedStories = useMemo(() => {
+    const groups = new Map();
 
-  const fetchstories = () => {
-    setStories([...dummyStories]);
-  };
+    stories.forEach((story) => {
+      const userKey = story.user._id || story.user.username;
 
-  // =================================
-  // NEXT PAGE
-  // =================================
+      if (!userKey) return;
+
+      if (!groups.has(userKey)) {
+        groups.set(userKey, {
+          userKey,
+          user: story.user,
+          stories: [],
+        });
+      }
+
+      groups.get(userKey).stories.push(story);
+    });
+
+    return Array.from(groups.values()).map((group) => ({
+      ...group,
+      stories: [...group.stories].sort(
+        (a, b) =>
+          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+      ),
+    }));
+  }, [stories]);
+
+  // Viewer navigation uses normalized individual stories, not user cards.
+  const viewerStories = useMemo(
+    () => groupedStories.flatMap((group) => group.stories),
+    [groupedStories],
+  );
 
   const handleNext = () => {
-    if (startIndex + CARDS_PER_PAGE < stories.length) {
+    if (startIndex + CARDS_PER_PAGE < groupedStories.length) {
       setDirection(1);
       setStartIndex((prev) => prev + CARDS_PER_PAGE);
     }
   };
 
-  // =================================
-  // PREVIOUS PAGE
-  // =================================
-
   const handlePrevious = () => {
     if (startIndex > 0) {
       setDirection(-1);
-      setStartIndex((prev) => prev - CARDS_PER_PAGE);
+      setStartIndex((prev) => Math.max(0, prev - CARDS_PER_PAGE));
     }
   };
 
-  // =================================
-  // OPEN STORY VIEWER
-  // =================================
+  const handleStoryClick = (group) => {
+    // Start with this user's oldest story, then move through their stories.
+    const firstStory = group.stories[0];
 
-  const handleStoryClick = (story) => {
-    const viewerStory = {
-      id: story.id,
-      media_type: story.story.type,
-      media_url: story.story.media,
-
-      content:
-        story.story.content ||
-        story.story.text ||
-        "",
-
-      background_color:
-        story.story.background ||
-        story.story.background_color ||
-        "linear-gradient(135deg, #155E63, #F26B4D)",
-
-      user: {
-        full_name: story.user.name,
-        profile_picture: story.user.dp,
-      },
-    };
-
-    setviewstory(viewerStory);
+    if (firstStory) {
+      setviewstory(firstStory);
+    }
   };
 
-  const visibleStories = stories.slice(
+  const visibleGroups = groupedStories.slice(
     startIndex,
-    startIndex + CARDS_PER_PAGE
+    startIndex + CARDS_PER_PAGE,
   );
 
   return (
     <div className="relative w-full">
-
-      {/* ================================= */}
-      {/* STORIES VIEWPORT */}
-      {/* ================================= */}
-
       <div className="overflow-hidden px-1 py-3">
-
-        <AnimatePresence
-          mode="popLayout"
-          initial={false}
-          custom={direction}
-        >
-
+        <AnimatePresence mode="popLayout" initial={false} custom={direction}>
           <motion.div
             key={startIndex}
             custom={direction}
@@ -110,10 +184,7 @@ const StoriesBar = () => {
               x: direction > 0 ? 450 : -450,
               opacity: 0,
             }}
-            animate={{
-              x: 0,
-              opacity: 1,
-            }}
+            animate={{ x: 0, opacity: 1 }}
             exit={{
               x: direction > 0 ? -450 : 450,
               opacity: 0,
@@ -124,296 +195,190 @@ const StoriesBar = () => {
                 stiffness: 280,
                 damping: 28,
               },
-              opacity: {
-                duration: 0.2,
-              },
+              opacity: { duration: 0.2 },
             }}
             className="flex gap-4"
           >
-
-            {/* ================================= */}
-            {/* CREATE STORY CARD */}
-            {/* ================================= */}
-
             {startIndex === 0 && (
               <motion.div
                 whileHover={{ y: -5 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => setshowmodal(true)}
-                className="group relative w-[145px] h-[190px] shrink-0 cursor-pointer"
+                className="group relative h-[190px] w-[145px] shrink-0 cursor-pointer"
               >
-
-                <div className="relative w-full h-full overflow-hidden rounded-[32px] border-2 border-dashed border-[#B8CDCA] bg-[#F8FCFB] shadow-sm transition-all duration-300 group-hover:border-[#155E63] group-hover:bg-[#F1F9F7] group-hover:shadow-md">
-
-                  {/* Decorative Corner */}
-
-                  <div className="absolute top-0 right-0 w-12 h-12 bg-[#F26B4D]/10 rounded-bl-[28px]" />
-
-                  {/* Plus */}
+                <div className="relative h-full w-full overflow-hidden rounded-[32px] border-2 border-dashed border-[#B8CDCA] bg-[#F8FCFB] shadow-sm transition-all duration-300 group-hover:border-[#155E63] group-hover:bg-[#F1F9F7] group-hover:shadow-md">
+                  <div className="absolute right-0 top-0 h-12 w-12 rounded-bl-[28px] bg-[#F26B4D]/10" />
 
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
-
-                    <div className="w-14 h-14 rounded-full bg-[#155E63] flex items-center justify-center shadow-md transition-all duration-300 group-hover:scale-110 group-hover:bg-[#F26B4D]">
-
-                      <Plus
-                        size={27}
-                        strokeWidth={2}
-                        className="text-white"
-                      />
-
+                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#155E63] shadow-md transition-all duration-300 group-hover:scale-110 group-hover:bg-[#F26B4D]">
+                      <Plus size={27} strokeWidth={2} className="text-white" />
                     </div>
 
-                    <p className="mt-4 text-sm font-semibold text-[#17383A] group-hover:text-[#155E63] transition-colors">
+                    <p className="mt-4 text-sm font-semibold text-[#17383A] transition-colors group-hover:text-[#155E63]">
                       Create Story
                     </p>
 
                     <p className="mt-1 text-[10px] text-[#819493]">
                       Share your moment
                     </p>
-
                   </div>
-
                 </div>
-
               </motion.div>
             )}
 
-            {/* ================================= */}
-            {/* STORY CARDS */}
-            {/* ================================= */}
+            {visibleGroups.map((group) => {
+              // Use the latest story as the card preview.
+              const preview = group.stories[group.stories.length - 1];
 
-            {visibleStories.map((story) => (
-
-              <motion.div
-                key={story.id}
-                whileHover={{ y: -5 }}
-                transition={{ duration: 0.2 }}
-                className="group relative w-[145px] h-[190px] shrink-0 cursor-pointer"
-                onClick={() => handleStoryClick(story)}
-              >
-
-                {/* ================================= */}
-                {/* MAIN CARD */}
-                {/* ================================= */}
-
-                <div
-                  className={`relative w-full h-full overflow-hidden rounded-[32px] bg-white border ${
-                    story.viewed
-                      ? "border-[#E8E2D8]"
-                      : "border-[#155E63]"
-                  } shadow-sm transition-all duration-300 group-hover:shadow-lg`}
+              return (
+                <motion.div
+                  key={group.userKey}
+                  whileHover={{ y: -5 }}
+                  transition={{ duration: 0.2 }}
+                  className="group relative h-[190px] w-[145px] shrink-0 cursor-pointer"
+                  onClick={() => handleStoryClick(group)}
                 >
-
-                  {/* ================================= */}
-                  {/* STORY MEDIA */}
-                  {/* ================================= */}
-
-                  {story.story.type === "video" ? (
-
-                    <video
-                      src={story.story.media}
-                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                      autoPlay
-                      muted
-                      loop
-                      playsInline
-                    />
-
-                  ) : story.story.type === "text" ? (
-
-                    <div
-                      className="absolute inset-0 flex items-center justify-center p-5"
-                      style={{
-                        background:
-                          story.story.background ||
-                          story.story.background_color ||
-                          "linear-gradient(135deg, #155E63, #F26B4D)",
-                      }}
-                    >
-                      <p className="text-white text-sm font-semibold text-center line-clamp-5">
-                        {story.story.content ||
-                          story.story.text}
-                      </p>
-                    </div>
-
-                  ) : (
-
-                    <img
-                      src={story.story.media}
-                      alt={story.user.name}
-                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                    />
-
-                  )}
-
-                  {/* ================================= */}
-                  {/* DARK GRADIENT */}
-                  {/* ================================= */}
-
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/15 to-transparent pointer-events-none" />
-
-                  {/* ================================= */}
-                  {/* DECORATIVE CORNER */}
-                  {/* ================================= */}
-
-                  <div className="absolute top-0 right-0 w-12 h-12 bg-[#F26B4D]/80 rounded-bl-[28px] z-10" />
-
-                  {/* ================================= */}
-                  {/* PROFILE IMAGE + STORY RING */}
-                  {/* ================================= */}
-
-                  <div
-                    className={`absolute top-3 left-3 w-11 h-11 p-[2px] rounded-full z-10 ${
-                      story.viewed
-                        ? "bg-[#AEB9B7]"
-                        : "bg-gradient-to-br from-[#F9B233] via-[#F26B4D] to-[#155E63]"
-                    }`}
-                  >
-
-                    <div className="w-full h-full rounded-full bg-white p-[2px]">
-
-                      <img
-                        src={story.user.dp}
-                        alt={story.user.name}
-                        className="w-full h-full object-cover rounded-full"
+                  <div className="relative h-full w-full overflow-hidden rounded-[32px] border border-[#155E63] bg-white shadow-sm transition-all duration-300 group-hover:shadow-lg">
+                    {preview.media_type === "video" ? (
+                      <video
+                        src={preview.media_url}
+                        className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        muted
+                        loop
+                        playsInline
                       />
-
-                    </div>
-
-                  </div>
-
-                  {/* ================================= */}
-                  {/* STORY TYPE */}
-                  {/* ================================= */}
-
-                  <div className="absolute top-4 right-4 z-20 w-6 h-6 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-sm">
-
-                    {story.story.type === "video" ? (
-
-                      <span className="text-[9px] text-[#155E63]">
-                        ▶
-                      </span>
-
-                    ) : story.story.type === "text" ? (
-
-                      <span className="text-[11px] font-bold text-[#155E63]">
-                        T
-                      </span>
-
+                    ) : preview.media_type === "text" ? (
+                      <div
+                        className="absolute inset-0 flex items-center justify-center p-5"
+                        style={{
+                          background:
+                            preview.background_color ||
+                            "linear-gradient(135deg, #155E63, #F26B4D)",
+                        }}
+                      >
+                        <p className="line-clamp-5 text-center text-sm font-semibold text-white">
+                          {preview.content}
+                        </p>
+                      </div>
                     ) : (
-
-                      <span className="text-[11px] text-[#F26B4D]">
-                        ✦
-                      </span>
-
+                      <img
+                        src={preview.media_url}
+                        alt={group.user.name}
+                        className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      />
                     )}
 
+                    <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/75 via-black/15 to-transparent" />
+
+                    <div className="absolute right-0 top-0 z-10 h-12 w-12 rounded-bl-[28px] bg-[#F26B4D]/80" />
+
+                    <div className="absolute left-3 top-3 z-10 h-11 w-11 rounded-full bg-gradient-to-br from-[#F9B233] via-[#F26B4D] to-[#155E63] p-[2px]">
+                      <div className="h-full w-full rounded-full bg-white p-[2px]">
+                        {group.user.dp ? (
+                          <img
+                            src={group.user.dp}
+                            alt={group.user.name}
+                            className="h-full w-full rounded-full object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center rounded-full bg-[#155E63] text-sm font-bold text-white">
+                            {group.user.name.charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="absolute right-4 top-4 z-20 flex h-6 w-6 items-center justify-center rounded-full bg-white/90 shadow-sm backdrop-blur-sm">
+                      {preview.media_type === "video" ? (
+                        <span className="text-[9px] text-[#155E63]">▶</span>
+                      ) : preview.media_type === "text" ? (
+                        <span className="text-[11px] font-bold text-[#155E63]">
+                          T
+                        </span>
+                      ) : (
+                        <span className="text-[11px] text-[#F26B4D]">✦</span>
+                      )}
+                    </div>
+
+                    <div className="absolute bottom-0 left-0 right-0 z-10 p-4">
+                      <p className="truncate text-sm font-semibold text-white">
+                        {group.user.name}
+                      </p>
+
+                      <p className="mt-1 text-[10px] text-white/80">
+                        {group.stories.length}{" "}
+                        {group.stories.length === 1 ? "story" : "stories"}
+                        {" · "}
+                        {moment(preview.createdAt).fromNow()}
+                      </p>
+                    </div>
                   </div>
+                </motion.div>
+              );
+            })}
 
-                  {/* ================================= */}
-                  {/* USER INFO */}
-                  {/* ================================= */}
+            {!loading && groupedStories.length === 0 && startIndex === 0 && (
+              <div className="flex h-[190px] min-w-[145px] flex-col items-center justify-center rounded-[32px] border border-dashed border-[#B8CDCA] bg-[#F8FCFB] px-4 text-center">
+                <span className="text-2xl">✨</span>
+                <p className="mt-2 text-xs font-semibold text-[#155E63]">
+                  No stories yet
+                </p>
+                <p className="mt-1 text-[10px] text-[#819493]">
+                  Be the first to share a moment
+                </p>
+              </div>
+            )}
 
-                  <div className="absolute bottom-0 left-0 right-0 p-4 z-10">
-
-                    <p className="text-white text-sm font-semibold truncate">
-                      {story.user.name}
-                    </p>
-
-                    <p className="text-white/70 text-[10px] mt-1">
-                      {moment(story.createdAt).fromNow()}
-                    </p>
-
-                  </div>
-
-                </div>
-
-              </motion.div>
-
-            ))}
-
+            {loading && startIndex === 0 && (
+              <div className="flex h-[190px] items-center px-4 text-sm text-[#819493]">
+                Loading stories...
+              </div>
+            )}
           </motion.div>
-
         </AnimatePresence>
-
       </div>
-
-      {/* ================================= */}
-      {/* PREVIOUS BUTTON */}
-      {/* ================================= */}
 
       {startIndex > 0 && (
         <motion.button
-          initial={{
-            opacity: 0,
-            scale: 0.7,
-          }}
-          animate={{
-            opacity: 1,
-            scale: 1,
-          }}
-          whileHover={{
-            scale: 1.1,
-          }}
-          whileTap={{
-            scale: 0.9,
-          }}
+          type="button"
+          initial={{ opacity: 0, scale: 0.7 }}
+          animate={{ opacity: 1, scale: 1 }}
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
           onClick={handlePrevious}
-          className="absolute left-[-12px] top-1/2 -translate-y-1/2 z-30 w-9 h-9 rounded-full bg-white border border-[#E8E2D8] shadow-md flex items-center justify-center text-[#155E63] hover:bg-[#155E63] hover:text-white transition-colors"
+          aria-label="Previous story cards"
+          className="absolute left-[-12px] top-1/2 z-30 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-[#E8E2D8] bg-white text-[#155E63] shadow-md transition-colors hover:bg-[#155E63] hover:text-white"
         >
           <ChevronLeft size={20} />
         </motion.button>
       )}
 
-      {/* ================================= */}
-      {/* NEXT BUTTON */}
-      {/* ================================= */}
-
-      {startIndex + CARDS_PER_PAGE < stories.length && (
+      {startIndex + CARDS_PER_PAGE < groupedStories.length && (
         <motion.button
-          initial={{
-            opacity: 0,
-            scale: 0.7,
-          }}
-          animate={{
-            opacity: 1,
-            scale: 1,
-          }}
-          whileHover={{
-            scale: 1.1,
-          }}
-          whileTap={{
-            scale: 0.9,
-          }}
+          type="button"
+          initial={{ opacity: 0, scale: 0.7 }}
+          animate={{ opacity: 1, scale: 1 }}
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
           onClick={handleNext}
-          className="absolute right-[-12px] top-1/2 -translate-y-1/2 z-30 w-9 h-9 rounded-full bg-white border border-[#E8E2D8] shadow-md flex items-center justify-center text-[#155E63] hover:bg-[#155E63] hover:text-white transition-colors"
+          aria-label="Next story cards"
+          className="absolute right-[-12px] top-1/2 z-30 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-[#E8E2D8] bg-white text-[#155E63] shadow-md transition-colors hover:bg-[#155E63] hover:text-white"
         >
           <ChevronRight size={20} />
         </motion.button>
       )}
 
-      {/* ================================= */}
-      {/* CREATE STORY MODAL */}
-      {/* ================================= */}
-
       {showmodal && (
-        <Storycreate
-          setshowmodal={setshowmodal}
-          fetchstories={fetchstories}
-        />
+        <Storycreate setshowmodal={setshowmodal} fetchstories={fetchstories} />
       )}
-
-      {/* ================================= */}
-      {/* STORY VIEWER */}
-      {/* ================================= */}
 
       {viewstory && (
         <Storyviewer
           viewstory={viewstory}
           setviewstory={setviewstory}
+          stories={viewerStories}
         />
       )}
-
     </div>
   );
 };
