@@ -5,7 +5,7 @@ import { Post } from "../models/post.js";
 import imagekit from "../config/imagekit.js";
 import User from "../models/user.js";
 import mongoose from "mongoose";
-
+import Comment from "../models/comment.js";
 export const addPost = async (req, res) => {
     const files = req.files || [];
     const uploadedPaths = files
@@ -159,116 +159,151 @@ const sizeMB = fileSize / (1024 * 1024);
 };
 
 export const getFeedPosts = async (req, res) => {
-    try {
-        const { userId: clerkId } = req.auth();
+  try {
+    const { userId: clerkId } = req.auth();
 
-        const user = await User.findOne({ clerkId })
-            .select("following followers")
-            .lean();
+    const user = await User.findOne({ clerkId })
+      .select("following followers")
+      .lean();
 
-        if (!user) {
-            return res.status(404).json({
-                success: false,
-                message: "User not found",
-            });
-        }
-
-        const userIds = [
-            user._id,
-            ...(user.following || []),
-            ...(user.followers || []),
-        ];
-
-        const uniqueUserIds = [
-            ...new Set(userIds.map((id) => id.toString())),
-        ];
-
-        const posts = await Post.find({
-            userId: { $in: uniqueUserIds },
-        })
-            .populate("userId", "username profile_picture")
-            .sort({ createdAt: -1 })
-            .lean();
-
-        return res.status(200).json({
-            success: true,
-            message: "Posts fetched successfully",
-            posts,
-        });
-    } catch (error) {
-        console.error("Get Feed Posts Error:", error);
-
-        return res.status(500).json({
-            success: false,
-            message: error.message,
-        });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
     }
+
+    const userIds = [
+      user._id,
+      ...(user.following || []),
+      ...(user.followers || []),
+    ];
+
+    const uniqueUserIds = [
+      ...new Set(userIds.map((id) => id.toString())),
+    ];
+
+    const posts = await Post.find({
+      userId: { $in: uniqueUserIds },
+    })
+      .populate("userId", "username full_name profile_picture")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const postIds = posts.map((post) => post._id);
+
+    const [allComments, previewComments] = await Promise.all([
+      postIds.length
+        ? Comment.aggregate([
+            { $match: { postId: { $in: postIds } } },
+            { $group: { _id: "$postId", count: { $sum: 1 } } },
+          ])
+        : [],
+      postIds.length
+        ? Comment.find({ postId: { $in: postIds } })
+            .sort({ createdAt: -1 })
+            .populate("userId", "username full_name profile_picture")
+            .lean()
+        : [],
+    ]);
+
+    const countByPost = new Map(
+      allComments.map((item) => [item._id.toString(), item.count])
+    );
+
+    const previewsByPost = new Map();
+
+    for (const comment of previewComments) {
+      const key = comment.postId.toString();
+      const previews = previewsByPost.get(key) || [];
+
+      if (previews.length < 2) {
+        previews.push(comment);
+        previewsByPost.set(key, previews);
+      }
+    }
+
+    const formattedPosts = posts.map((post) => ({
+      ...post,
+      commentsCount: countByPost.get(post._id.toString()) || 0,
+      comments: previewsByPost.get(post._id.toString()) || [],
+    }));
+
+    return res.status(200).json({
+      success: true,
+      message: "Posts fetched successfully",
+      posts: formattedPosts,
+    });
+  } catch (error) {
+    console.error("Get Feed Posts Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch feed posts",
+    });
+  }
 };
 
 export const likePost = async (req, res) => {
-    try {
-        const { userId: clerkId } = req.auth();
-        const { postId } = req.body;
+  try {
+    const { userId: clerkId } = req.auth();
+    const { postId } = req.body;
 
-        if (!postId) {
-            return res.status(400).json({
-                success: false,
-                message: "Post ID is required",
-            });
-        }
-
-        const user = await User.findOne({ clerkId });
-
-        if (!user) {
-            return res.status(404).json({
-                success: false,
-                message: "User not found",
-            });
-        }
-
-        const post = await Post.findById(postId);
-
-        if (!post) {
-            return res.status(404).json({
-                success: false,
-                message: "Post not found",
-            });
-        }
-
-        const alreadyLiked = post.likes.some(
-            (id) => id.toString() === user._id.toString()
-        );
-
-        if (alreadyLiked) {
-            post.likes = post.likes.filter(
-                (id) => id.toString() !== user._id.toString()
-            );
-
-            await post.save();
-
-            return res.status(200).json({
-                success: true,
-                liked: false,
-                message: "Post unliked successfully",
-            });
-        }
-
-        post.likes.push(user._id);
-        await post.save();
-
-        return res.status(200).json({
-            success: true,
-            liked: true,
-            message: "Post liked successfully",
-        });
-    } catch (error) {
-        console.error("Like Post Error:", error);
-
-        return res.status(500).json({
-            success: false,
-            message: error.message,
-        });
+    if (!postId || !mongoose.isValidObjectId(postId)) {
+      return res.status(400).json({
+        success: false,
+        message: "A valid post ID is required",
+      });
     }
+
+    const user = await User.findOne({ clerkId }).select("_id");
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    const userObjectId = user._id;
+
+    const post = await Post.findById(postId).select("likes");
+
+    if (!post) {
+      return res.status(404).json({
+        success: false,
+        message: "Post not found",
+      });
+    }
+
+    const alreadyLiked = post.likes.some(
+      (id) => id.toString() === userObjectId.toString()
+    );
+
+    const updatedPost = await Post.findByIdAndUpdate(
+      postId,
+      alreadyLiked
+        ? { $pull: { likes: userObjectId } }
+        : { $addToSet: { likes: userObjectId } },
+      { new: true }
+    ).select("likes");
+
+    return res.status(200).json({
+      success: true,
+      liked: !alreadyLiked,
+      likesCount: updatedPost.likes.length,
+      message: alreadyLiked
+        ? "Post unliked successfully"
+        : "Post liked successfully",
+    });
+  } catch (error) {
+    console.error("Like Post Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to update like",
+    });
+  }
 };
 
 export const updatePost = async (req, res) => {
@@ -420,4 +455,52 @@ export const getProfilePosts = async (req, res) => {
             message: error.message || "Failed to fetch profile posts",
         });
     }
+};
+export const getPostById = async (req, res) => {
+  try {
+    const { postId } = req.params;
+
+    if (!mongoose.isValidObjectId(postId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid post ID",
+      });
+    }
+
+    const post = await Post.findById(postId)
+      .populate("userId", "username full_name profile_picture")
+      .lean();
+
+    if (!post) {
+      return res.status(404).json({
+        success: false,
+        message: "Post not found",
+      });
+    }
+
+    const [commentCount, comments] = await Promise.all([
+      Comment.countDocuments({ postId: post._id }),
+      Comment.find({ postId: post._id })
+        .sort({ createdAt: -1 })
+        .limit(2)
+        .populate("userId", "username full_name profile_picture")
+        .lean(),
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      post: {
+        ...post,
+        commentsCount: commentCount,
+        comments,
+      },
+    });
+  } catch (error) {
+    console.error("Get Post Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch post",
+    });
+  }
 };

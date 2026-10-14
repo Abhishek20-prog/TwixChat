@@ -13,6 +13,7 @@ import Profile from "./pages/profile";
 import Chatbox from "./pages/chatbox";
 import Message from "./pages/message";
 import Connections from "./pages/connections";
+import Comments from "./pages/comments";
 
 import { fetchCurrentUser } from "./features/user/userslice";
 import { fetchRecentMessages } from "./features/messages/messageslice";
@@ -163,6 +164,10 @@ useEffect(() => {
                         path="profile/:profileId"
                         element={<Profile />}
                     />
+                    <Route
+    path="post/:postId/comments"
+    element={<Comments />}
+/>
                 </Route>
 
                 {/* ==================================================
